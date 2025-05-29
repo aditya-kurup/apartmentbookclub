@@ -13,8 +13,7 @@ class MainNavigation extends StatelessWidget {
     final bool showFAB = location == '/home';
 
     return Scaffold(
-      body: child,
-      floatingActionButton: showFAB
+      body: child,      floatingActionButton: showFAB
           ? Container(
               height: 65,
               width: 65,
@@ -22,21 +21,8 @@ class MainNavigation extends StatelessWidget {
               padding: EdgeInsets.zero,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.gradientStart.withOpacity(0.9),
-                    AppTheme.primaryColor,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                gradient: AppTheme.primaryGradient,
+                boxShadow: AppTheme.buttonShadow,
               ),
               child: FloatingActionButton(
                 onPressed: () {
@@ -76,9 +62,8 @@ class MainNavigation extends StatelessWidget {
             currentIndex: _getCurrentIndex(context),
             onTap: (index) => _onItemTapped(context, index),
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            selectedItemColor: AppTheme.accentColor,
-            unselectedItemColor: AppTheme.textSecondary,
+            backgroundColor: Colors.transparent,            selectedItemColor: AppTheme.primaryColor,
+            unselectedItemColor: AppTheme.textMuted,
             elevation: 0,
             selectedLabelStyle: const TextStyle(
               fontSize: 12,
