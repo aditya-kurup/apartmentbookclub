@@ -72,6 +72,38 @@ class _HomeScreenState extends State<HomeScreen> {
       "image": "https://placehold.co/400x600/45b7d1/ffffff?text=Mystery",
       "genre": "Mystery"
     },
+    {
+      "title": "It Ends with Us",
+      "author": "Colleen Hoover",
+      "rating": 4.7,
+      "price": "\$14.99",
+      "image": "https://placehold.co/400x600/7b68ee/ffffff?text=Romance",
+      "genre": "Romance"
+    },
+    {
+      "title": "The Silent Wife",
+      "author": "Karin Slaughter",
+      "rating": 4.6,
+      "price": "\$13.49",
+      "image": "https://placehold.co/400x600/45b7d1/ffffff?text=Mystery",
+      "genre": "Mystery"
+    },
+    {
+      "title": "Normal People",
+      "author": "Sally Rooney",
+      "rating": 4.3,
+      "price": "\$11.99",
+      "image": "https://placehold.co/400x600/ff6b6b/ffffff?text=Fiction",
+      "genre": "Fiction"
+    },
+    {
+      "title": "A Brief History of Time",
+      "author": "Stephen Hawking",
+      "rating": 4.9,
+      "price": "\$17.99",
+      "image": "https://placehold.co/300x450/4ecdc4/ffffff?text=Science",
+      "genre": "Science"
+    },
   ];
 
   @override
@@ -201,7 +233,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeaturedBooks() {
-    // Filter featured books based on selected category
     final filteredFeaturedBooks = selectedCategory == "All" 
         ? featuredBooks 
         : featuredBooks.where((book) => book["genre"] == selectedCategory).toList();
@@ -211,7 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           "Featured Books",
-          style: Theme.of(context).textTheme.headlineSmall,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 16),
         filteredFeaturedBooks.isEmpty
@@ -239,14 +273,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            AppTheme.gradientStart,
-                            AppTheme.gradientEnd,
+                            AppTheme.lightAccent.withOpacity(0.8),
+                            AppTheme.gradientStart.withOpacity(0.3),
                           ],
+                          stops: const [0.0, 1.0],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.gradientStart.withOpacity(0.3),
+                            color: AppTheme.primaryColor.withOpacity(0.1),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -261,8 +296,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: double.infinity,
                               height: 140,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primaryColor.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
@@ -272,11 +314,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       color: AppTheme.surfaceColor,
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.image_not_supported,
-                                          color: AppTheme.primaryColor,
-                                        ),
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        color: AppTheme.primaryColor,
+                                        size: 32,
                                       ),
                                     );
                                   },
@@ -287,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               book["title"],
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppTheme.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -297,40 +338,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 4),
                             Text(
                               book["author"],
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
                                 fontSize: 14,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 8),
+                            const Spacer(),
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.star,
                                   color: Color(0xFFFFB800),
                                   size: 16,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  book["rating"].toString(),
+                                  "${book["rating"]}",
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppTheme.textPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
-                            ),
-                            const Spacer(),
-                            Text(
-                              book["price"],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
                             ),
                           ],
                         ),

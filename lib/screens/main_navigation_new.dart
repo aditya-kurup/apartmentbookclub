@@ -9,55 +9,49 @@ class MainNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String location = GoRouterState.of(context).uri.path;
-    final bool showFAB = location == '/home';
-
     return Scaffold(
       body: child,
-      floatingActionButton: showFAB
-          ? Container(
-              height: 65,
-              width: 65,
-              margin: EdgeInsets.zero,
-              padding: EdgeInsets.zero,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.gradientStart.withOpacity(0.9),
-                    AppTheme.primaryColor,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: FloatingActionButton(
-                onPressed: () {
-                  context.push(
-                    '/book/lend', // We'll create this route
-                  );
-                },
-                elevation: 0,
-                backgroundColor: Colors.transparent,
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-            )
-          : null,
+      floatingActionButton: Container(
+        height: 56,
+        width: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.gradientStart,
+              AppTheme.gradientEnd,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            // Add functionality for the + button
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Add a new book")),
+            );
+          },
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 0,
+        notchMargin: 8,
         color: Colors.white,
         elevation: 0,
         child: Container(
@@ -71,7 +65,7 @@ class MainNavigation extends StatelessWidget {
               ),
             ],
           ),
-          height: 55, // Slightly reduced height
+          height: 60,
           child: BottomNavigationBar(
             currentIndex: _getCurrentIndex(context),
             onTap: (index) => _onItemTapped(context, index),
@@ -141,7 +135,7 @@ class MainNavigation extends StatelessWidget {
   void _onItemTapped(BuildContext context, int index) {
     // Skip the center placeholder (index 2)
     if (index == 2) return;
-
+    
     switch (index) {
       case 0:
         context.go('/home');
