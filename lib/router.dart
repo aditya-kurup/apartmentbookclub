@@ -7,6 +7,7 @@ import 'screens/book_details_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/main_navigation.dart';
+import 'screens/lend_book_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -21,7 +22,13 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegistrationScreen(),
-      ),        ShellRoute(
+      ),
+      GoRoute(
+        path: '/book/lend',
+        name: 'lend',
+        builder: (context, state) => const LendBookScreen(),
+      ),
+      ShellRoute(
         builder: (context, state, child) => MainNavigation(child: child),
         routes: [
           GoRoute(
@@ -53,6 +60,10 @@ class AppRouter {
           final bookId = state.pathParameters['id']!;
           return BookDetailsScreen(bookId: bookId);
         },
+      ),
+      GoRoute(
+        path: '/book/lend',
+        builder: (context, state) => const LendBookScreen(),
       ),
     ],
   );

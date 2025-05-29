@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Claude AI Light Mode Colors
-  static const Color primaryColor = Color(0xFF7C3AED); // Claude AI purple
-  static const Color backgroundColor = Colors.white; // White background
-  static const Color surfaceColor = Color(0xFFF9F9F9); // Light gray
-  static const Color cardColor = Colors.white; // White cards
+  // Main Colors
+  static const Color backgroundColor = Color(0xFFFFFFFF); // Pure White (main background)
+  static const Color surfaceColor = Color(0xFFF0EEE5); // Warm Off-White (secondary surfaces)
+  static const Color cardColor = Color(0xFFF8ECE7); // Lightest orange/peach
+  
+  // Call to Action Colors (Orange-Brown Palette)
+  static const Color primaryColor = Color(0xFFE2AE97); // Warm peach
+  static const Color accentColor = Color(0xFFE2AE97); // Warm peach for consistency
+  static const Color lightAccent = Color(0xFFF8ECE7); // Lightest orange/peach
   static const Color textPrimary = Color(0xFF111827); // Dark gray for text
   static const Color textSecondary = Color(0xFF6B7280); // Medium gray for secondary text
-  static const Color accentColor = Color(0xFF7C3AED); // Purple accent
-  static const Color gradientStart = Color(0xFF7C3AED); // Purple gradient start
-  static const Color gradientEnd = Color(0xFF4F46E5); // Indigo gradient end
+  static const Color gradientStart = Color(0xFFE2AE97); // Warm peach
+  static const Color gradientEnd = Color(0xFFF8ECE7); // Lightest orange/peach
 
   // Light theme
   static ThemeData get lightTheme {
