@@ -397,11 +397,10 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
                   ),
                 ),
                 Row(
-                  children: [
-                    ...List.generate(5, (index) => Icon(
+                  children: [                    ...List.generate(5, (index) => Icon(
                       index < book['rating'] ? Icons.star : Icons.star_border,
                       size: 12,
-                      color: Colors.amber,
+                      color: AppTheme.starColor,
                     )),
                     const SizedBox(width: 8),
                     Text(

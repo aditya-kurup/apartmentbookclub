@@ -199,22 +199,21 @@ class _LendBookScreenState extends State<LendBookScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
+  Widget build(BuildContext context) {    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text(
           'Lend a Book',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: AppTheme.surfaceColor,
+        foregroundColor: AppTheme.textPrimary,
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
             height: 1,
-            color: Colors.grey[200],
+            color: AppTheme.textMuted.withOpacity(0.1),
           ),
         ),
       ),
@@ -465,7 +464,6 @@ class _LendBookScreenState extends State<LendBookScreen> {
       ),
     );
   }
-
   Widget _buildSectionCard({
     required String title,
     required Widget child,
@@ -473,15 +471,9 @@ class _LendBookScreenState extends State<LendBookScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,7 +483,7 @@ class _LendBookScreenState extends State<LendBookScreen> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -500,7 +492,6 @@ class _LendBookScreenState extends State<LendBookScreen> {
       ),
     );
   }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -512,30 +503,32 @@ class _LendBookScreenState extends State<LendBookScreen> {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        labelStyle: const TextStyle(color: AppTheme.textSecondary),
+        hintStyle: const TextStyle(color: AppTheme.textMuted),
         prefixIcon: Icon(icon, color: AppTheme.primaryColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: AppTheme.backgroundColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: validator,
     );
   }
-
   Widget _buildDropdownField({
     required String label,
     required String value,
@@ -545,29 +538,34 @@ class _LendBookScreenState extends State<LendBookScreen> {
   }) {
     return DropdownButtonFormField<String>(
       value: value,
+      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: AppTheme.textSecondary),
         prefixIcon: Icon(icon, color: AppTheme.primaryColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: AppTheme.backgroundColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       items: items.map((item) {
         return DropdownMenuItem(
           value: item,
-          child: Text(item),
+          child: Text(
+            item,
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
         );
       }).toList(),
       onChanged: onChanged,
