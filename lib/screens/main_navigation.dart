@@ -1,0 +1,102 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../config/app_theme.dart';
+
+class MainNavigation extends StatelessWidget {
+  final Widget child;
+
+  const MainNavigation({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _getCurrentIndex(context),
+          onTap: (index) => _onItemTapped(context, index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppTheme.accentColor,
+          unselectedItemColor: AppTheme.textSecondary,
+          elevation: 0,
+          selectedLabelStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Poppins',
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'Poppins',
+          ),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_books_outlined),
+              activeIcon: Icon(Icons.library_books),
+              label: 'Library',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outlined),
+              activeIcon: Icon(Icons.people),
+              label: 'Community',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outlined),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _getCurrentIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.path;
+    switch (location) {
+      case '/home':
+        return 0;
+      case '/library':
+        return 1;
+      case '/community':
+        return 2;
+      case '/profile':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
+  void _onItemTapped(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 1:
+        context.go('/library');
+        break;
+      case 2:
+        context.go('/community');
+        break;
+      case 3:
+        context.go('/profile');
+        break;
+    }
+  }
+}
