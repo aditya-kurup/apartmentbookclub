@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
+import '../config/app_theme.dart';
 
 class CustomSearchBar extends StatefulWidget {
   final Function(String) onSearchChanged;

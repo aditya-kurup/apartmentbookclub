@@ -1,6 +1,9 @@
 import 'package:go_router/go_router.dart';
 import 'screens/login_screen.dart';
 import 'screens/registration_screen.dart';
+import 'screens/sign_in_landing_screen.dart';
+import 'screens/create_account_screen.dart';
+import 'screens/apartment_details_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/book_details_screen.dart';
@@ -11,8 +14,23 @@ import 'screens/lend_book_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/sign-in',
     routes: [
+      GoRoute(
+        path: '/sign-in',
+        name: 'sign-in',
+        builder: (context, state) => const SignInLandingScreen(),
+      ),
+      GoRoute(
+        path: '/create-account',
+        name: 'create-account',
+        builder: (context, state) => const CreateAccountScreen(),
+      ),
+      GoRoute(
+        path: '/apartment-details',
+        name: 'apartment-details',
+        builder: (context, state) => const ApartmentDetailsScreen(),
+      ),
       GoRoute(
         path: '/login',
         name: 'login',

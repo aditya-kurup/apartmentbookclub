@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
+import '../config/app_theme.dart';
 
 class CategoryFilter extends StatelessWidget {
   final List<String> categories;
