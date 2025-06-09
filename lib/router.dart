@@ -14,7 +14,7 @@ import 'screens/lend_book_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/sign-in',
+    initialLocation: '/login',
     routes: [
       GoRoute(
         path: '/sign-in',
