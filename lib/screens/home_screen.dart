@@ -24,9 +24,8 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController();
   final TextEditingController _searchController = TextEditingController();
   int _currentBannerIndex = 0;
-  Timer? _timer;
-  List<Map<String, dynamic>> _classXIBooks = [];
-  List<Map<String, dynamic>> _recommendedBooks = [];
+  Timer? _timer;  List<Map<String, dynamic>> _featuredBooks = [];
+  List<Map<String, dynamic>> _newArrivals = [];
   bool _isLoading = true;
   
   final List<Map<String, dynamic>> _banners = [
@@ -60,32 +59,28 @@ class _HomePageState extends State<HomePage> {
   }  Future<void> _loadBooks() async {
     try {
       // Get current user's apartment ID first
-      final currentUserId = AuthService.currentUserId;
-      if (currentUserId == null) {
+      final currentUserId = AuthService.currentUserId;      if (currentUserId == null) {
         print('Error: No current user found');
         setState(() {
-          _classXIBooks = _getMockClassXIBooks();
-          _recommendedBooks = _getMockRecommendedBooks();
+          _featuredBooks = _getMockFeaturedBooks();
+          _newArrivals = _getMockNewArrivals();
           _isLoading = false;
         });
         return;
       }
 
-      final currentUser = await DatabaseService.getUserProfile(currentUserId);
-      if (currentUser == null || currentUser.apartmentId == null) {
+      final currentUser = await DatabaseService.getUserProfile(currentUserId);      if (currentUser == null || currentUser.apartmentId == null) {
         print('Error: No user details or apartment ID found');
         setState(() {
-          _classXIBooks = _getMockClassXIBooks();
-          _recommendedBooks = _getMockRecommendedBooks();
+          _featuredBooks = _getMockFeaturedBooks();
+          _newArrivals = _getMockNewArrivals();
           _isLoading = false;
         });
         return;
       }
 
       // Fetch books from current user's apartment only
-      final allBooks = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);
-      
-      // Convert Book objects to Map format for compatibility with existing UI
+      final allBooks = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);      // Convert Book objects to Map format for compatibility with existing UI
       final booksAsMap = allBooks.map((book) => {
         'id': book.id,
         'title': book.title,
@@ -94,52 +89,59 @@ class _HomePageState extends State<HomePage> {
         'coverUrl': book.coverUrl,
         'rating': book.rating.toString(),
         'isAvailable': book.isAvailable,
-      }).toList();      // Filter books by category with proper null safety
-      final classXI = booksAsMap.where((book) {
-        final category = book['category']?.toString().toLowerCase() ?? '';
-        return category.contains('class') ||
-               category.contains('education') ||
-               category.contains('textbook');
+        'isFeatured': book.isFeatured,
+        'isNewArrival': book.isNewArrival,
+      }).toList();      // Filter featured books (only books explicitly marked as featured)
+      final featuredBooks = booksAsMap.where((book) {
+        return book['isFeatured'] == true;
       }).toList();
 
-      final recommended = booksAsMap.where((book) {
-        final rating = book['rating']?.toString() ?? '0';
-        final category = book['category']?.toString().toLowerCase() ?? '';
-        return (double.tryParse(rating) != null && double.parse(rating) >= 4.0) ||
-               category.contains('fiction') ||
-               category.contains('popular');
+      // Filter new arrivals (books marked as new arrivals)
+      final newArrivals = booksAsMap.where((book) {
+        return book['isNewArrival'] == true;
       }).toList();
 
-      print('DEBUG: Total apartment books found: ${booksAsMap.length}');
-      print('DEBUG: Class XI books found: ${classXI.length}');
-      print('DEBUG: Recommended books found: ${recommended.length}');      setState(() {
-        // Show actual books from database, fallback to general books if no category matches
-        _classXIBooks = classXI.isNotEmpty ? classXI : booksAsMap.take(5).toList();
-        _recommendedBooks = recommended.isNotEmpty ? recommended : booksAsMap.skip(classXI.length).take(5).toList();
+      // If NO books are marked as featured, use highest rated books as fallback
+      final effectiveFeaturedBooks = featuredBooks.isNotEmpty 
+          ? featuredBooks 
+          : booksAsMap.where((book) => 
+              (double.tryParse(book['rating']?.toString() ?? '0') ?? 0.0) >= 4.0
+            ).toList().take(6).toList();
+
+      // If NO books are marked as new arrivals, use different books than featured as fallback
+      final effectiveNewArrivals = newArrivals.isNotEmpty 
+          ? newArrivals 
+          : booksAsMap.where((book) => 
+              !effectiveFeaturedBooks.any((featured) => featured['id'] == book['id'])
+            ).toList().take(6).toList();print('DEBUG: Total apartment books found: ${booksAsMap.length}');
+      print('DEBUG: Featured books found: ${featuredBooks.length}');
+      print('DEBUG: New arrivals found: ${newArrivals.length}');
+      print('DEBUG: Effective featured books: ${effectiveFeaturedBooks.length}');
+      print('DEBUG: Effective new arrivals: ${effectiveNewArrivals.length}');      setState(() {
+        // Use effective books with smart fallback logic
+        _featuredBooks = effectiveFeaturedBooks.isNotEmpty ? effectiveFeaturedBooks : _getMockFeaturedBooks();
+        _newArrivals = effectiveNewArrivals.isNotEmpty ? effectiveNewArrivals : _getMockNewArrivals();
         _isLoading = false;
       });
-    } catch (e) {
-      print('Error loading books: $e');
+    } catch (e) {      print('Error loading books: $e');
       // Only fall back to mock data if there's a real error
       setState(() {
-        _classXIBooks = _getMockClassXIBooks();
-        _recommendedBooks = _getMockRecommendedBooks();
+        _featuredBooks = _getMockFeaturedBooks();
+        _newArrivals = _getMockNewArrivals();
         _isLoading = false;
       });
     }
   }
-
-  List<Map<String, dynamic>> _getMockClassXIBooks() {
+  List<Map<String, dynamic>> _getMockFeaturedBooks() {
     return [
-      {'title': 'Geografi Kelas XI', 'author': 'Erlangga'},
-      {'title': 'Fisika Kelas XI', 'author': 'Erlangga'},
-      {'title': 'Kimia Kelas 11', 'author': 'Erlangga'},
-      {'title': 'Biologi Kelas XI', 'author': 'Erlangga'},
-      {'title': 'Matematika XI', 'author': 'Erlangga'},
+      {'title': 'The Alchemist', 'author': 'Paulo Coelho'},
+      {'title': 'To Kill a Mockingbird', 'author': 'Harper Lee'},
+      {'title': '1984', 'author': 'George Orwell'},
+      {'title': 'Pride and Prejudice', 'author': 'Jane Austen'},
+      {'title': 'The Great Gatsby', 'author': 'F. Scott Fitzgerald'},
     ];
   }
-
-  List<Map<String, dynamic>> _getMockRecommendedBooks() {
+  List<Map<String, dynamic>> _getMockNewArrivals() {
     return [
       {'title': 'The Midnight Library', 'author': 'Matt Haig'},
       {'title': 'Project Hail Mary', 'author': 'Andy Weir'},
@@ -359,9 +361,8 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Class XI books just for you!',
+                      children: [                        const Text(
+                          'Featured Books',
                           style: TextStyle(
                             color: Color(0xFF111827),
                             fontSize: 16,
@@ -372,7 +373,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.pushNamed('all-books', pathParameters: {'category': 'class-xi'});
+                            context.pushNamed('all-books', pathParameters: {'category': 'featured'});
                           },
                           child: const Text(
                             'See All',
@@ -390,31 +391,29 @@ class _HomePageState extends State<HomePage> {
                   ),
                   
                   const SizedBox(height: 12),
-                  
-                  // First book row - using loaded data
+                    // First book row - using loaded data
                   SizedBox(
                     height: 270,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _classXIBooks.length,
+                      itemCount: _featuredBooks.length,
                       separatorBuilder: (context, index) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
-                        final book = _classXIBooks[index];
+                        final book = _featuredBooks[index];
                         return _buildBookCard(book['title'], book['author']);
                       },
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
-                  // Second book section
+                  const SizedBox(height: 24),                  // Second book section
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Recommended for you',
+                          'New Arrivals',
                           style: TextStyle(
                             color: Color(0xFF111827),
                             fontSize: 16,
@@ -425,7 +424,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.pushNamed('all-books', pathParameters: {'category': 'recommended'});
+                            context.pushNamed('all-books', pathParameters: {'category': 'new-arrivals'});
                           },
                           child: const Text(
                             'See All',
@@ -443,17 +442,16 @@ class _HomePageState extends State<HomePage> {
                   ),
                   
                   const SizedBox(height: 12),
-                  
-                  // Second book row - using loaded data
+                    // Second book row - using loaded data
                   SizedBox(
                     height: 270,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _recommendedBooks.length,
+                      itemCount: _newArrivals.length,
                       separatorBuilder: (context, index) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
-                        final book = _recommendedBooks[index];
+                        final book = _newArrivals[index];
                         return _buildBookCard(book['title'], book['author']);
                       },
                     ),

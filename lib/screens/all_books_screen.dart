@@ -46,17 +46,15 @@ class _AllBooksScreenState extends State<AllBooksScreen> {
       if (widget.category == 'all') {
         // Get all books from user's apartment
         books = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);
-      } else {
-        // Get books by category from user's apartment only
+      } else {        // Get books by category from user's apartment only
         final allApartmentBooks = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);
         books = allApartmentBooks.where((book) => 
           book.category.toLowerCase() == widget.category.toLowerCase() ||
-          widget.category == 'class-xi' && (
-            book.category.toLowerCase().contains('class') ||
-            book.category.toLowerCase().contains('education') ||
-            book.category.toLowerCase().contains('textbook')
+          widget.category == 'featured' && (
+            book.isFeatured == true ||
+            book.rating >= 4.5
           ) ||
-          widget.category == 'recommended' && book.rating >= 4.0
+          widget.category == 'new-arrivals' && book.isNewArrival == true
         ).toList();
       }
 
@@ -232,15 +230,16 @@ class _AllBooksScreenState extends State<AllBooksScreen> {
         },
       ),
     );
-  }
-  String _getCategoryTitle(String category) {
+  }  String _getCategoryTitle(String category) {
     switch (category) {
       case 'Educational':
-      case 'class-xi':
         return 'Educational Books';
+      case 'featured':
+        return 'Featured Books';
       case 'Fiction':
-      case 'recommended':
         return 'Fiction Books';
+      case 'new-arrivals':
+        return 'New Arrivals';
       case 'Non-Fiction':
         return 'Non-Fiction Books';
       case 'Biography':
