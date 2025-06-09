@@ -113,7 +113,9 @@ class _HomePageState extends State<HomePage> {
           ? newArrivals 
           : booksAsMap.where((book) => 
               !effectiveFeaturedBooks.any((featured) => featured['id'] == book['id'])
-            ).toList().take(6).toList();print('DEBUG: Total apartment books found: ${booksAsMap.length}');
+            ).toList().take(6).toList();
+
+      print('DEBUG: Total apartment books found: ${booksAsMap.length}');
       print('DEBUG: Featured books found: ${featuredBooks.length}');
       print('DEBUG: New arrivals found: ${newArrivals.length}');
       print('DEBUG: Effective featured books: ${effectiveFeaturedBooks.length}');
@@ -442,7 +444,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   
                   const SizedBox(height: 12),
-                    // Second book row - using loaded data
+                  
+                  // Second book row - using loaded data
                   SizedBox(
                     height: 270,
                     child: ListView.separated(
