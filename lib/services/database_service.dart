@@ -10,15 +10,26 @@ class DatabaseService {
   /// Fetch all books from the database
   static Future<List<models.Book>> getAllBooks() async {
     try {
+      print('DEBUG: Fetching all books...');
+      
       final response = await _supabase
           .from('books')
           .select()
           .order('created_at', ascending: false);
       
+      print('DEBUG: Total books in database: ${response.length}');
+      if (response.isNotEmpty) {
+        print('DEBUG: First few books:');
+        for (var i = 0; i < (response.length > 3 ? 3 : response.length); i++) {
+          print('  - ${response[i]['title']} by ${response[i]['author']}');
+        }
+      }
+      
       return (response as List)
           .map((book) => models.Book.fromJson(book))
           .toList();
     } catch (e) {
+      print('DEBUG: Error fetching all books: $e');
       throw Exception('Failed to fetch books: $e');
     }
   }
@@ -54,23 +65,92 @@ class DatabaseService {
     } catch (e) {
       throw Exception('Failed to fetch books by category: $e');
     }
-  }
-  /// Search books by title or author
+  }  /// Search books by title, author, or publisher only
   static Future<List<models.Book>> searchBooks(String query) async {
     try {
+      print('DEBUG: Searching for books with query: "$query"');
+      print('DEBUG: Current user authenticated: ${_supabase.auth.currentUser != null}');
+      print('DEBUG: Current user ID: ${_supabase.auth.currentUser?.id}');
+      
+      // Minimum query length to avoid too broad searches
+      if (query.trim().length < 2) {
+        print('DEBUG: Query too short, returning empty results');
+        return [];
+      }
+      
+      final searchTerm = query.toLowerCase().trim();
+      
+      // Search only by title, author, or publisher - more specific search
       final response = await _supabase
           .from('books')
           .select()
-          .or('title.ilike.%$query%,author.ilike.%$query%')
+          .or('title.ilike.%$searchTerm%,author.ilike.%$searchTerm%,publisher.ilike.%$searchTerm%')
           .order('created_at', ascending: false);
+      
+      print('DEBUG: Search response length: ${response.length}');
+      print('DEBUG: Search response: $response');
       
       return (response as List)
           .map((book) => models.Book.fromJson(book))
           .toList();
     } catch (e) {
+      print('DEBUG: Search error: $e');
       throw Exception('Failed to search books: $e');
     }
   }
+  /// Search books within a specific apartment by title, author, or publisher
+  static Future<List<models.Book>> searchBooksInApartment(String query, String apartmentId) async {
+    try {
+      print('DEBUG: Searching for books in apartment "$apartmentId" with query: "$query"');
+      
+      // Minimum query length to avoid too broad searches
+      if (query.trim().length < 2) {
+        print('DEBUG: Query too short, returning empty results');
+        return [];
+      }
+      
+      final searchTerm = query.toLowerCase().trim();
+      
+      final response = await _supabase
+          .from('books')
+          .select()
+          .eq('apartment_id', apartmentId)
+          .or('title.ilike.%$searchTerm%,author.ilike.%$searchTerm%,publisher.ilike.%$searchTerm%')
+          .order('created_at', ascending: false);
+      
+      print('DEBUG: Apartment search found ${response.length} results');
+      
+      return (response as List)
+          .map((book) => models.Book.fromJson(book))
+          .toList();
+    } catch (e) {
+      print('DEBUG: Apartment search error: $e');
+      throw Exception('Failed to search books in apartment: $e');
+    }
+  }
+  /// Get a specific book by title and author with owner details
+  static Future<Map<String, dynamic>?> getBookByTitleAndAuthor(String title, String author) async {
+    try {
+      final response = await _supabase
+          .from('books')
+          .select('''
+            *,
+            user_details!lender_id(
+              id,
+              username,
+              flat_no
+            )
+          ''')
+          .eq('title', title)
+          .eq('author', author)
+          .maybeSingle();
+      
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch book details: $e');
+    }
+  }
+
   /// Add a new book to the database
   static Future<models.Book> addBook(models.Book book) async {
     try {
@@ -396,6 +476,62 @@ class DatabaseService {
     }
   }
 
+  // =============== USER STATISTICS ===============
+  
+  /// Get user borrowing count (currently active)
+  static Future<int> getUserBorrowingCount(String userId) async {
+    try {
+      final response = await _supabase
+          .from('borrow_requests')
+          .select('id')
+          .eq('borrower_id', userId)
+          .eq('status', 'approved');
+      
+      return response.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get user lending count (currently active)
+  static Future<int> getUserLendingCount(String userId) async {
+    try {
+      final response = await _supabase
+          .from('borrow_requests')
+          .select('id')
+          .eq('lender_id', userId)
+          .eq('status', 'approved');
+      
+      return response.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get comprehensive user profile with statistics
+  static Future<Map<String, dynamic>> getUserProfileWithStats(String userId) async {
+    try {
+      // Get user details
+      final userDetails = await getUserProfile(userId);
+      
+      // Get profile data
+      final profile = await getProfile(userId);
+      
+      // Get current statistics
+      final borrowingCount = await getUserBorrowingCount(userId);
+      final lendingCount = await getUserLendingCount(userId);
+      
+      return {
+        'userDetails': userDetails,
+        'profile': profile,
+        'borrowingCount': borrowingCount,
+        'lendingCount': lendingCount,
+      };
+    } catch (e) {
+      throw Exception('Failed to fetch user profile with stats: $e');
+    }
+  }
+
   // =============== PROFILES ===============
   
   /// Get user profile data
@@ -411,6 +547,21 @@ class DatabaseService {
       return models.Profile.fromJson(response);
     } catch (e) {
       throw Exception('Failed to fetch profile: $e');
+    }
+  }
+
+  /// Create user profile data
+  static Future<models.Profile> createProfile(models.Profile profile) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .insert(profile.toJson())
+          .select()
+          .single();
+      
+      return models.Profile.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to create profile: $e');
     }
   }
 
@@ -541,6 +692,64 @@ class DatabaseService {
           .eq('id', notificationId);
     } catch (e) {
       throw Exception('Failed to mark notification as read: $e');
+    }
+  }
+
+  // =============== ENHANCED BORROW REQUESTS FOR LIBRARY ===============
+    /// Fetch detailed borrow requests for a user (as borrower) with book and lender info
+  static Future<List<Map<String, dynamic>>> getBorrowRequestsWithDetailsForBorrower(String borrowerId) async {
+    try {
+      final response = await _supabase
+          .from('borrow_requests')
+          .select('''
+            *,
+            books!inner(id, title, author, category, cover_url),
+            lender:user_details!lender_id(id, username, flat_no)
+          ''')
+          .eq('borrower_id', borrowerId)
+          .eq('status', 'approved')
+          .order('request_date', ascending: false);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw Exception('Failed to fetch detailed borrower requests: $e');
+    }
+  }
+  /// Fetch detailed borrow requests for a user (as lender) with book and borrower info
+  static Future<List<Map<String, dynamic>>> getBorrowRequestsWithDetailsForLender(String lenderId) async {
+    try {
+      final response = await _supabase
+          .from('borrow_requests')
+          .select('''
+            *,
+            books!inner(id, title, author, category, cover_url),
+            borrower:user_details!borrower_id(id, username, flat_no)
+          ''')
+          .eq('lender_id', lenderId)
+          .eq('status', 'approved')
+          .order('request_date', ascending: false);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw Exception('Failed to fetch detailed lender requests: $e');
+    }
+  }
+
+  /// Fetch only available books by apartment
+  static Future<List<models.Book>> getAvailableBooksByApartment(String apartmentId) async {
+    try {
+      final response = await _supabase
+          .from('books')
+          .select()
+          .eq('apartment_id', apartmentId)
+          .eq('is_available', true)
+          .order('created_at', ascending: false);
+      
+      return (response as List)
+          .map((book) => models.Book.fromJson(book))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to fetch available apartment books: $e');
     }
   }
 }

@@ -21,24 +21,159 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   String selectedLendingPeriod = '7 days';
   final List<String> lendingPeriods = ['7 days', '14 days', '21 days', '30 days'];
   
-  // Mock book data - in a real app, this would come from an API
-  Map<String, String> get bookData => {
-    'genre': 'Educational',
-    'pages': '324',
-    'language': 'Indonesian',
-    'isbn': '978-602-298-123-4',
-    'publisher': widget.author,
-    'publishYear': '2023',
-    'availability': 'Available',
-    'rating': '4.5',
-    'description': 'This is a comprehensive ${widget.title} textbook designed for Class XI students. It covers all essential topics with clear explanations, practical examples, and exercises to help students master the subject matter.',
-    'condition': 'Excellent',
-    'location': 'Apartment 3B',
-    'owner': 'Sarah Johnson',
-  };
-
+  // State variables for real data
+  Map<String, dynamic>? _bookData;
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadBookData();
+  }
+  
+  Future<void> _loadBookData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+      
+      final bookData = await DatabaseService.getBookByTitleAndAuthor(
+        widget.title, 
+        widget.author
+      );
+      
+      setState(() {
+        _bookData = bookData;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+  
+  String _getFormattedPublishYear() {
+    if (_bookData?['published_date'] != null) {
+      try {
+        return DateTime.parse(_bookData!['published_date']).year.toString();
+      } catch (e) {
+        return 'Unknown';
+      }
+    }
+    return 'Unknown';
+  }
+  
+  String _getAvailabilityStatus() {
+    if (_bookData?['is_available'] == true) {
+      return 'Available';
+    } else {
+      return 'Not Available';
+    }
+  }
+  
+  String _getOwnerName() {
+    return _bookData?['user_details']?['username'] ?? 'Unknown Owner';
+  }
+    String _getOwnerLocation() {
+    final flatNo = _bookData?['user_details']?['flat_no'];
+    return flatNo != null ? 'Apartment $flatNo' : 'Unknown Location';
+  }
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red[300],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load book details',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadBookData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_bookData == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(
+          child: Text(
+            'Book not found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: CustomScrollView(
@@ -111,8 +246,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Rating and availability
+                    // Rating and availability
                   Row(
                     children: [
                       Row(
@@ -120,7 +254,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                           const Icon(Icons.star, color: Color(0xFFFBBF24), size: 20),
                           const SizedBox(width: 4),
                           Text(
-                            bookData['rating']!,
+                            (_bookData?['rating']?.toString() ?? '0.0'),
                             style: const TextStyle(
                               color: Color(0xFF111827),
                               fontSize: 14,
@@ -134,13 +268,17 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: _bookData?['is_available'] == true 
+                              ? const Color(0xFFDCFCE7) 
+                              : const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          bookData['availability']!,
-                          style: const TextStyle(
-                            color: Color(0xFF059669),
+                          _getAvailabilityStatus(),
+                          style: TextStyle(
+                            color: _bookData?['is_available'] == true 
+                                ? const Color(0xFF059669) 
+                                : const Color(0xFFDC2626),
                             fontSize: 12,
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w600,
@@ -150,8 +288,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
-                  // Book description
+                    // Book description
                   const Text(
                     'Description',
                     style: TextStyle(
@@ -163,7 +300,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    bookData['description']!,
+                    _bookData?['description'] ?? 'No description available.',
                     style: const TextStyle(
                       color: Color(0xFF6B7280),
                       fontSize: 14,
@@ -185,16 +322,15 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildDetailRow('Genre', bookData['genre']!),
-                  _buildDetailRow('Pages', bookData['pages']!),
-                  _buildDetailRow('Language', bookData['language']!),
-                  _buildDetailRow('ISBN', bookData['isbn']!),
-                  _buildDetailRow('Publisher', bookData['publisher']!),
-                  _buildDetailRow('Year', bookData['publishYear']!),
-                  _buildDetailRow('Condition', bookData['condition']!),
+                  _buildDetailRow('Genre', _bookData?['category'] ?? 'Unknown'),
+                  _buildDetailRow('Pages', _bookData?['pages']?.toString() ?? 'Unknown'),
+                  _buildDetailRow('Language', 'English'), // Default for now
+                  _buildDetailRow('ISBN', _bookData?['isbn'] ?? 'Not available'),
+                  _buildDetailRow('Publisher', _bookData?['publisher'] ?? 'Unknown'),
+                  _buildDetailRow('Year', _getFormattedPublishYear()),
+                  _buildDetailRow('Condition', 'Good'), // Default for now
                   const SizedBox(height: 24),
-                  
-                  // Owner information
+                    // Owner information
                   const Text(
                     'Book Owner',
                     style: TextStyle(
@@ -218,7 +354,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                           radius: 24,
                           backgroundColor: const Color(0xFF3B82F6),
                           child: Text(
-                            bookData['owner']![0],
+                            _getOwnerName()[0],
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -232,7 +368,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                bookData['owner']!,
+                                _getOwnerName(),
                                 style: const TextStyle(
                                   color: Color(0xFF111827),
                                   fontSize: 16,
@@ -241,7 +377,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                                 ),
                               ),
                               Text(
-                                bookData['location']!,
+                                _getOwnerLocation(),
                                 style: const TextStyle(
                                   color: Color(0xFF6B7280),
                                   fontSize: 14,
@@ -364,9 +500,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
         child: SafeArea(
           child: SizedBox(
             width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: bookData['availability'] == 'Available' ? _requestBorrow : null,
+            height: 48,            child: ElevatedButton(
+              onPressed: _bookData?['is_available'] == true ? _requestBorrow : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
@@ -376,7 +511,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 elevation: 0,
               ),
               child: Text(
-                bookData['availability'] == 'Available' 
+                _bookData?['is_available'] == true 
                     ? 'Request to Borrow ($selectedLendingPeriod)'
                     : 'Not Available',
                 style: const TextStyle(
@@ -454,9 +589,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       );      // Create borrow request in database
       final borrowRequest = BorrowRequest(
         id: '', // Will be generated by database
-        bookId: 'temp-book-id', // In real app, this would be the actual book ID
-        borrowerId: 'current-user-id', // Get from auth
-        lenderId: 'owner-user-id', // Get from book owner
+        bookId: _bookData?['id'] ?? '', // Use actual book ID from database
+        borrowerId: 'current-user-id', // TODO: Get from auth service
+        lenderId: _bookData?['lender_id'] ?? '', // Get from book owner
         requestDate: DateTime.now(),
         status: 'pending',
         lendingPeriodDays: int.parse(selectedLendingPeriod.split(' ')[0]),
@@ -511,9 +646,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Your borrow request for "${widget.title}" has been sent to ${bookData['owner']}. You will be notified once they respond.',
+              const SizedBox(height: 8),              Text(
+                'Your borrow request for "${widget.title}" has been sent to ${_getOwnerName()}. You will be notified once they respond.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFF6B7280),
@@ -637,9 +771,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Contact ${bookData['owner']}',
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),          title: Text(
+            'Contact ${_getOwnerName()}',
             style: const TextStyle(
               color: Color(0xFF111827),
               fontSize: 18,

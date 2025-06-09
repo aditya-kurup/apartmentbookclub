@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_theme.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,19 +23,117 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     
-    // Simulate login API call
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go('/home');
-    }  }
+    try {
+      final response = await AuthService.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );      if (response.user != null) {
+        // Check if email is confirmed (only enforce in production)
+        if (AuthService.shouldEnforceEmailConfirmation && !AuthService.isEmailConfirmed) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            _showEmailNotConfirmedDialog();
+          }
+          return;
+        }
+
+        // Successfully signed in
+        if (mounted) {
+          setState(() => _isLoading = false);
+          context.go('/home');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorDialog(e.toString());
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Login Failed'),
+        content: Text(message.replaceAll('Exception: ', '')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  void _showEmailNotConfirmedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Email Not Confirmed'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Please check your email and click the confirmation link before signing in.'),
+            const SizedBox(height: 16),
+            const Text('Didn\'t receive the email?'),
+            const SizedBox(height: 8),
+            const Text('• Check your spam/junk folder'),
+            const Text('• Make sure the email address is correct'),
+            const Text('• Try resending the confirmation email'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                Navigator.pop(context); // Close dialog first
+                setState(() => _isLoading = true);
+                
+                // Check if email is now confirmed
+                final isConfirmed = await AuthService.checkEmailConfirmationStatus();
+                if (isConfirmed) {
+                  if (mounted) {
+                    setState(() => _isLoading = false);
+                    context.go('/home');
+                  }
+                  return;
+                }
+                
+                // Resend confirmation email
+                await AuthService.resendConfirmation(_emailController.text.trim());
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Confirmation email sent! Please check your inbox.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  _showErrorDialog(e.toString());
+                }
+              }
+            },
+            child: const Text('Check Again / Resend'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -621,9 +720,8 @@ class _LoginScreenState extends State<LoginScreen> {
             color: AppTheme.textSecondary,
             fontSize: 14,
           ),
-        ),
-        GestureDetector(
-          onTap: () => context.go('/register'),
+        ),        GestureDetector(
+          onTap: () => context.go('/create-account'),
           child: Text(
             'Sign Up',
             style: TextStyle(

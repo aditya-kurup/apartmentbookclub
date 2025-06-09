@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../models/book.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,17 +13,14 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dynamic> _userProfile = {
-    'name': 'John Doe',
-    'email': 'john.doe@email.com',
-    'apartmentNumber': '5B',
-    'memberSince': 'January 2024',
-    'booksRead': 12,
-    'favoriteGenre': 'Mystery',
-    'borrowing': 2,
-    'lending': 2,
-  };
+class _ProfileScreenState extends State<ProfileScreen> {
+  UserDetails? _userDetails;
+  Profile? _profile;
+  Map<String, dynamic>? _userStats;
+  bool _isLoading = true;
+  String _errorMessage = '';
 
+  // Mock reading history - in a real app, this would come from the database
   final List<Map<String, dynamic>> _readingHistory = [
     {
       'title': 'The Seven Husbands of Evelyn Hugo',
@@ -43,7 +43,44 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
   ];
 
   @override
-  Widget build(BuildContext context) {    return Scaffold(
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    if (!AuthService.isSignedIn) {
+      setState(() {
+        _errorMessage = 'Not signed in';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final userId = AuthService.currentUserId!;
+      final profileData = await DatabaseService.getUserProfileWithStats(userId);
+      
+      setState(() {
+        _userDetails = profileData['userDetails'];
+        _profile = profileData['profile'];
+        _userStats = {
+          'borrowingCount': profileData['borrowingCount'],
+          'lendingCount': profileData['lendingCount'],
+        };
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading profile: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         backgroundColor: AppTheme.backgroundColor,
@@ -65,28 +102,32 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 24),
-            _buildStatsSection(),
-            const SizedBox(height: 24),
-            _buildPreferencesSection(),
-            const SizedBox(height: 24),
-            _buildReadingHistorySection(),
-            const SizedBox(height: 24),
-            _buildActionsSection(),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _errorMessage.isNotEmpty
+              ? Center(child: Text(_errorMessage))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildProfileHeader(),
+                      const SizedBox(height: 24),
+                      _buildStatsSection(),
+                      const SizedBox(height: 24),
+                      _buildPreferencesSection(),
+                      const SizedBox(height: 24),
+                      _buildReadingHistorySection(),
+                      const SizedBox(height: 24),
+                      _buildActionsSection(),
+                    ],
+                  ),
+                ),
     );
   }
-
   Widget _buildProfileHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -112,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             ),
             child: Center(
               child: Text(
-                _userProfile['name'].substring(0, 1),
+                _userDetails?.username.substring(0, 1).toUpperCase() ?? 'U',
                 style: GoogleFonts.poppins(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -123,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
           ),
           const SizedBox(height: 16),
           Text(
-            _userProfile['name'],
+            _userDetails?.username ?? 'Guest',
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.w600,
@@ -132,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
           ),
           const SizedBox(height: 4),
           Text(
-            'Apartment ${_userProfile['apartmentNumber']}',
+            'Apartment ${_userDetails?.flatNo ?? 'N/A'}',
             style: GoogleFonts.poppins(
               fontSize: 16,
               color: AppTheme.textSecondary,
@@ -140,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
           ),
           const SizedBox(height: 8),
           Text(
-            'Member since ${_userProfile['memberSince']}',
+            'Member since ${_userDetails?.createdAt.year ?? ''}',
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: AppTheme.textSecondary,
@@ -149,8 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
         ],
       ),
     );
-  }
-  Widget _buildStatsSection() {
+  }  Widget _buildStatsSection() {
     return Column(
       children: [
         Row(
@@ -158,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             Expanded(
               child: _buildStatCard(
                 'Books Read',
-                _userProfile['booksRead'].toString(),
+                _profile?.booksRead.toString() ?? '0',
                 Icons.menu_book,
                 AppTheme.accentColor,
               ),
@@ -167,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             Expanded(
               child: _buildStatCard(
                 'Favorite Genre',
-                _userProfile['favoriteGenre'],
+                _profile?.favoriteGenre ?? 'N/A',
                 Icons.favorite,
                 Colors.red,
               ),
@@ -180,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             Expanded(
               child: _buildStatCard(
                 'Borrowing',
-                _userProfile['borrowing'].toString(),
+                _userStats?['borrowingCount']?.toString() ?? '0',
                 Icons.call_received,
                 Colors.green,
                 onTap: () => context.go('/library'),
@@ -190,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             Expanded(
               child: _buildStatCard(
                 'Lending',
-                _userProfile['lending'].toString(),
+                _userStats?['lendingCount']?.toString() ?? '0',
                 Icons.call_made,
                 Colors.orange,
                 onTap: () => context.go('/library'),
@@ -271,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
             ),
           ),
           const SizedBox(height: 16),
-          _buildPreferenceItem('Email', _userProfile['email'], Icons.email),
+          _buildPreferenceItem('Email', _userDetails?.email ?? 'N/A', Icons.email),
           _buildPreferenceItem('Notifications', 'Enabled', Icons.notifications),
           _buildPreferenceItem('Privacy', 'Public Profile', Icons.privacy_tip),
         ],
@@ -579,11 +619,24 @@ class _ProfileScreenState extends State<ProfileScreen> {  final Map<String, dyna
               'Cancel',
               style: GoogleFonts.poppins(color: AppTheme.textSecondary),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go('/login');
+          ),          TextButton(
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                await AuthService.signOut();
+                if (mounted) {
+                  context.go('/login');
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error signing out: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
               'Sign Out',

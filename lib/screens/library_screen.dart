@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/database_service.dart';
-import '../models/book.dart';
+import '../services/auth_service.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -14,35 +14,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<Map<String, dynamic>> borrowedBooks = [];
   List<Map<String, dynamic>> lendingBooks = [];
   bool _isLoading = true;
-  
-  // Mock user ID - in real app, get from authentication
-  final String currentUserId = 'current-user-id';
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadLibraryData();
   }
-
   Future<void> _loadLibraryData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     
     try {
-      // Fetch borrow requests for current user as borrower
-      final borrowRequests = await DatabaseService.getBorrowRequestsByBorrower(currentUserId);
+      // Get current authenticated user ID
+      final currentUserId = AuthService.currentUserId;
+      if (currentUserId == null) {
+        throw Exception('User not authenticated');
+      }
       
-      // Fetch borrow requests for current user as lender
-      final lendRequests = await DatabaseService.getBorrowRequestsByLender(currentUserId);
+      // Fetch detailed borrow requests for current user as borrower
+      final borrowRequestsData = await DatabaseService.getBorrowRequestsWithDetailsForBorrower(currentUserId);
+      
+      // Fetch detailed borrow requests for current user as lender
+      final lendRequestsData = await DatabaseService.getBorrowRequestsWithDetailsForLender(currentUserId);
       
       // Convert borrow requests to UI format for borrowed books
-      final borrowedBooksData = borrowRequests
-          .where((request) => request.status == 'approved')
+      final borrowedBooksData = borrowRequestsData
           .map((request) => _convertBorrowRequestToBorrowedBook(request))
           .toList();
       
       // Convert lend requests to UI format for lending books
-      final lendingBooksData = lendRequests
-          .where((request) => request.status == 'approved')
+      final lendingBooksData = lendRequestsData
           .map((request) => _convertBorrowRequestToLendingBook(request))
           .toList();
       
@@ -53,37 +57,60 @@ class _LibraryScreenState extends State<LibraryScreen> {
       });
     } catch (e) {
       print('Error loading library data: $e');
-      // Fallback to mock data
+      setState(() {
+        _errorMessage = 'Failed to load library data. Please try again.';
+        _isLoading = false;
+      });
+      // Fallback to mock data in case of error
       _loadMockData();
     }
   }
-
-  Map<String, dynamic> _convertBorrowRequestToBorrowedBook(BorrowRequest request) {
-    final returnDate = request.approvedDate?.add(Duration(days: request.lendingPeriodDays));
+  Map<String, dynamic> _convertBorrowRequestToBorrowedBook(Map<String, dynamic> requestData) {
+    final approvedDate = requestData['approved_date'] != null 
+        ? DateTime.parse(requestData['approved_date']) 
+        : null;
+    final lendingPeriodDays = requestData['lending_period_days'] ?? 14;
+    final returnDate = approvedDate?.add(Duration(days: lendingPeriodDays));
     final daysLeft = returnDate?.difference(DateTime.now()).inDays ?? 0;
     
+    final book = requestData['books'] ?? {};
+    final lender = requestData['lender'] ?? {};
+    
     return {
-      'title': 'Book Title', // Would come from joined book data
-      'author': 'Book Author',
+      'title': book['title'] ?? 'Unknown Title',
+      'author': book['author'] ?? 'Unknown Author',
       'daysLeft': daysLeft,
-      'borrowedFrom': 'Lender Name', // Would come from joined user data
-      'borrowDate': request.approvedDate?.toString().split(' ').first ?? '',
+      'borrowedFrom': _formatUserName(lender),
+      'borrowDate': approvedDate?.toString().split(' ').first ?? '',
       'returnDate': returnDate?.toString().split(' ').first ?? '',
-      'genre': 'Fiction', // Would come from book data
-      'image': 'https://placehold.co/400x600/f093fb/ffffff?text=Book',
+      'genre': book['category'] ?? 'Fiction',
+      'image': book['cover_url'] ?? 'https://placehold.co/400x600/f093fb/ffffff?text=Book',
     };
   }
 
-  Map<String, dynamic> _convertBorrowRequestToLendingBook(BorrowRequest request) {
+  Map<String, dynamic> _convertBorrowRequestToLendingBook(Map<String, dynamic> requestData) {
+    final approvedDate = requestData['approved_date'] != null 
+        ? DateTime.parse(requestData['approved_date']) 
+        : null;
+    final lendingPeriodDays = requestData['lending_period_days'] ?? 14;
+    final returnDate = approvedDate?.add(Duration(days: lendingPeriodDays));
+    
+    final book = requestData['books'] ?? {};
+    final borrower = requestData['borrower'] ?? {};
+    
     return {
-      'title': 'Book Title', // Would come from joined book data  
-      'author': 'Book Author',
-      'lentTo': 'Borrower Name', // Would come from joined user data
-      'lendDate': request.approvedDate?.toString().split(' ').first ?? '',
-      'returnDate': request.approvedDate?.add(Duration(days: request.lendingPeriodDays)).toString().split(' ').first ?? '',
-      'genre': 'Fiction', // Would come from book data
-      'image': 'https://placehold.co/400x600/4facfe/ffffff?text=Book',
+      'title': book['title'] ?? 'Unknown Title',
+      'author': book['author'] ?? 'Unknown Author',
+      'lentTo': _formatUserName(borrower),
+      'lendDate': approvedDate?.toString().split(' ').first ?? '',
+      'returnDate': returnDate?.toString().split(' ').first ?? '',
+      'genre': book['category'] ?? 'Fiction',
+      'image': book['cover_url'] ?? 'https://placehold.co/400x600/4facfe/ffffff?text=Book',
     };
+  }
+  String _formatUserName(Map<String, dynamic> user) {
+    final username = user['username'] ?? 'Unknown User';
+    return username;
   }
 
   void _loadMockData() {
@@ -143,8 +170,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ];
       _isLoading = false;
     });
-  }
-  @override
+  }  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -155,7 +181,72 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
                 ),
               )
-            : SingleChildScrollView(
+            : _errorMessage != null
+                ? _buildErrorState()
+                : _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Color(0xFF6B7280),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to Load Library',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+                fontFamily: 'Inter',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Something went wrong',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+                fontFamily: 'Inter',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadLibraryData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Retry',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
           child: Column(
             children: [
               // Header matching home page style
@@ -312,15 +403,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         .expand((widget) => [widget, const SizedBox(width: 12)])
                         .toList(),
                   ),
-                ),
-              ] else ...[
+                ),              ] else ...[
                 _buildEmptyState('Lending Books', 'No books being lent yet', Icons.share_outlined),
-              ],              // Bottom padding for navigation bar
+              ],
+
+              // Bottom padding for navigation bar
               const SizedBox(height: 100),
             ],
           ),
-        ),
-      ),
     );
   }
 

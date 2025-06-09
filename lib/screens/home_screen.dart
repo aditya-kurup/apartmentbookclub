@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -56,11 +57,33 @@ class _HomePageState extends State<HomePage> {
     _searchController.addListener(() {
       setState(() {}); // Update UI when search text changes
     });
-  }
-  Future<void> _loadBooks() async {
+  }  Future<void> _loadBooks() async {
     try {
-      // Fetch all books from database
-      final allBooks = await DatabaseService.getAllBooks();
+      // Get current user's apartment ID first
+      final currentUserId = AuthService.currentUserId;
+      if (currentUserId == null) {
+        print('Error: No current user found');
+        setState(() {
+          _classXIBooks = _getMockClassXIBooks();
+          _recommendedBooks = _getMockRecommendedBooks();
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final currentUser = await DatabaseService.getUserProfile(currentUserId);
+      if (currentUser == null || currentUser.apartmentId == null) {
+        print('Error: No user details or apartment ID found');
+        setState(() {
+          _classXIBooks = _getMockClassXIBooks();
+          _recommendedBooks = _getMockRecommendedBooks();
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Fetch books from current user's apartment only
+      final allBooks = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);
       
       // Convert Book objects to Map format for compatibility with existing UI
       final booksAsMap = allBooks.map((book) => {
@@ -71,9 +94,7 @@ class _HomePageState extends State<HomePage> {
         'coverUrl': book.coverUrl,
         'rating': book.rating.toString(),
         'isAvailable': book.isAvailable,
-      }).toList();
-
-      // Filter books by category with proper null safety
+      }).toList();      // Filter books by category with proper null safety
       final classXI = booksAsMap.where((book) {
         final category = book['category']?.toString().toLowerCase() ?? '';
         return category.contains('class') ||
@@ -89,14 +110,17 @@ class _HomePageState extends State<HomePage> {
                category.contains('popular');
       }).toList();
 
-      setState(() {
-        _classXIBooks = classXI.isNotEmpty ? classXI : _getMockClassXIBooks();
-        _recommendedBooks = recommended.isNotEmpty ? recommended : _getMockRecommendedBooks();
+      print('DEBUG: Total apartment books found: ${booksAsMap.length}');
+      print('DEBUG: Class XI books found: ${classXI.length}');
+      print('DEBUG: Recommended books found: ${recommended.length}');      setState(() {
+        // Show actual books from database, fallback to general books if no category matches
+        _classXIBooks = classXI.isNotEmpty ? classXI : booksAsMap.take(5).toList();
+        _recommendedBooks = recommended.isNotEmpty ? recommended : booksAsMap.skip(classXI.length).take(5).toList();
         _isLoading = false;
       });
     } catch (e) {
       print('Error loading books: $e');
-      // Fallback to mock data
+      // Only fall back to mock data if there's a real error
       setState(() {
         _classXIBooks = _getMockClassXIBooks();
         _recommendedBooks = _getMockRecommendedBooks();

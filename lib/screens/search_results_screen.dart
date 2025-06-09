@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import '../models/book.dart';
 
 class SearchResultsScreen extends StatefulWidget {
@@ -16,34 +17,49 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   List<Book> _searchResults = [];
   bool _isLoading = true;
   bool _hasError = false;
-  String _errorMessage = '';
-  @override
+  String _errorMessage = '';  @override
   void initState() {
     super.initState();
-    if (widget.query.isNotEmpty) {
+    if (widget.query.isNotEmpty && widget.query.trim().length >= 2) {
       _performSearch();
     } else {
       setState(() {
         _isLoading = false;
         _hasError = true;
-        _errorMessage = 'No search query provided';
+        _errorMessage = widget.query.trim().length < 2 
+            ? 'Please enter at least 2 characters to search'
+            : 'No search query provided';
       });
     }
-  }
-
-  Future<void> _performSearch() async {
+  }Future<void> _performSearch() async {
     setState(() {
       _isLoading = true;
       _hasError = false;
-    });
+    });    try {
+      print('DEBUG: Starting search for: "${widget.query}"');
+      
+      // Get current user's apartment ID
+      final currentUserId = AuthService.currentUserId;
+      if (currentUserId == null) {
+        throw Exception('User not authenticated');
+      }
 
-    try {
-      final results = await DatabaseService.searchBooks(widget.query);
+      final currentUser = await DatabaseService.getUserProfile(currentUserId);
+      if (currentUser == null || currentUser.apartmentId == null) {
+        throw Exception('User apartment not found');
+      }
+
+      // Search only within user's apartment using database search
+      final results = await DatabaseService.searchBooksInApartment(widget.query, currentUser.apartmentId!);
+      
+      print('DEBUG: Search completed. Found ${results.length} results in apartment');
+      
       setState(() {
         _searchResults = results;
         _isLoading = false;
       });
     } catch (e) {
+      print('DEBUG: Search failed with error: $e');
       setState(() {
         _hasError = true;
         _errorMessage = e.toString();

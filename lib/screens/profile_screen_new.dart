@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../models/book.dart' as models;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,36 +14,111 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final Map<String, dynamic> _userProfile = {
-    'name': 'John Doe',
-    'email': 'john.doe@email.com',
-    'apartmentNumber': '5B',
-    'memberSince': 'January 2024',
-    'booksRead': 12,
-    'favoriteGenre': 'Mystery',
-  };
+  // Real data properties
+  models.UserDetails? _userDetails;
+  models.Profile? _profile;
+  Map<String, dynamic>? _userStats;
+  List<Map<String, dynamic>> _readingHistory = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-  final List<Map<String, dynamic>> _readingHistory = [
-    {
-      'title': 'The Seven Husbands of Evelyn Hugo',
-      'author': 'Taylor Jenkins Reid',
-      'dateFinished': 'March 1, 2024',
-      'rating': 5,
-    },
-    {
-      'title': 'Atomic Habits',
-      'author': 'James Clear',
-      'dateFinished': 'February 15, 2024',
-      'rating': 4,
-    },
-    {
-      'title': 'The Thursday Murder Club',
-      'author': 'Richard Osman',
-      'dateFinished': 'February 2, 2024',
-      'rating': 4,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
 
+  Future<void> _loadProfileData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      final userId = AuthService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }      // Get user profile with statistics
+      final profileData = await DatabaseService.getUserProfileWithStats(userId);
+      
+      setState(() {
+        _userDetails = models.UserDetails.fromJson(profileData['userDetails']);
+        _profile = models.Profile.fromJson(profileData['profile']);
+        _userStats = profileData['stats'];
+        
+        // For now, we'll use mock reading history until we implement a reading history table
+        _readingHistory = _getMockReadingHistory();
+        
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load profile: ${e.toString()}';
+        _isLoading = false;
+        
+        // Fallback to mock data for profile structure
+        _userDetails = models.UserDetails(
+          id: '',
+          username: 'Guest',
+          email: 'guest@example.com',
+          flatNo: 'N/A',
+          phoneNumber: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        _profile = models.Profile(
+          userId: '',
+          booksRead: 0,
+          favoriteGenre: 'N/A',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        _userStats = {
+          'borrowingCount': 0,
+          'lendingCount': 0,
+        };
+        _readingHistory = _getMockReadingHistory();
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _getMockReadingHistory() {
+    return [
+      {
+        'title': 'The Seven Husbands of Evelyn Hugo',
+        'author': 'Taylor Jenkins Reid',
+        'dateFinished': 'March 1, 2024',
+        'rating': 5,
+      },
+      {
+        'title': 'Atomic Habits',
+        'author': 'James Clear',
+        'dateFinished': 'February 15, 2024',
+        'rating': 4,
+      },
+      {
+        'title': 'The Thursday Murder Club',
+        'author': 'Richard Osman',
+        'dateFinished': 'February 2, 2024',
+        'rating': 4,
+      },    ];
+  }
+
+  String _formatJoinDate(DateTime? date) {
+    if (date == null) return 'Recently';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays < 30) {
+      return 'Recently';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '${months} month${months > 1 ? 's' : ''} ago';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '${years} year${years > 1 ? 's' : ''} ago';
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,22 +143,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 24),
-            _buildStatsSection(),
-            const SizedBox(height: 24),
-            _buildPreferencesSection(),
-            const SizedBox(height: 24),
-            _buildReadingHistorySection(),
-            const SizedBox(height: 24),
-            _buildActionsSection(),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : _errorMessage.isNotEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red.shade300,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading profile',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorMessage,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: AppTheme.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadProfileData,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildProfileHeader(),
+                      const SizedBox(height: 24),
+                      _buildStatsSection(),
+                      const SizedBox(height: 24),
+                      _buildPreferencesSection(),
+                      const SizedBox(height: 24),
+                      _buildReadingHistorySection(),
+                      const SizedBox(height: 24),
+                      _buildActionsSection(),
+                    ],
+                  ),
+                ),
     );
   }
 
@@ -110,10 +228,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
-            ),
-            child: Center(
+            ),            child: Center(
               child: Text(
-                _userProfile['name'].substring(0, 1),
+                (_userDetails?.username ?? 'G').substring(0, 1).toUpperCase(),
                 style: GoogleFonts.poppins(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -124,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            _userProfile['name'],
+            _userDetails?.username ?? 'Guest',
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.w600,
@@ -133,7 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Apartment ${_userProfile['apartmentNumber']}',
+            'Apartment ${_userDetails?.flatNo ?? 'N/A'}',
             style: GoogleFonts.poppins(
               fontSize: 16,
               color: AppTheme.textSecondary,
@@ -141,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Member since ${_userProfile['memberSince']}',
+            'Member since ${_formatJoinDate(_userDetails?.createdAt)}',
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: AppTheme.textSecondary,
@@ -151,14 +268,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
   Widget _buildStatsSection() {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             'Books Read',
-            _userProfile['booksRead'].toString(),
+            (_profile?.booksRead ?? 0).toString(),
             Icons.menu_book,
             AppTheme.accentColor,
           ),
@@ -166,10 +282,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'Favorite Genre',
-            _userProfile['favoriteGenre'],
-            Icons.favorite,
-            Colors.red,
+            'Currently Borrowing',
+            (_userStats?['borrowingCount'] ?? 0).toString(),
+            Icons.download,
+            Colors.blue,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            'Currently Lending',
+            (_userStats?['lendingCount'] ?? 0).toString(),
+            Icons.upload,
+            Colors.green,
           ),
         ),
       ],
@@ -239,10 +364,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimary,
-            ),
-          ),
+            ),          ),
           const SizedBox(height: 16),
-          _buildPreferenceItem('Email', _userProfile['email'], Icons.email),
+          _buildPreferenceItem('Email', _userDetails?.email ?? 'N/A', Icons.email),
+          _buildPreferenceItem('Favorite Genre', _profile?.favoriteGenre ?? 'Not set', Icons.favorite),
           _buildPreferenceItem('Notifications', 'Enabled', Icons.notifications),
           _buildPreferenceItem('Privacy', 'Public Profile', Icons.privacy_tip),
         ],
@@ -550,11 +675,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Cancel',
               style: GoogleFonts.poppins(color: AppTheme.textSecondary),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go('/login');
+          ),          TextButton(
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                await AuthService.signOut();
+                if (mounted) {
+                  context.go('/login');
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error signing out: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
               'Sign Out',

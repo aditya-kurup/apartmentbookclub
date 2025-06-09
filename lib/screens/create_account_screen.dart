@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -15,24 +17,69 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _flatNoController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+    // Apartment selection
+  List<Map<String, dynamic>> _apartments = [];
+  bool _loadingApartments = true;
+  String? _selectedApartmentId;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadApartments();
+  }
+
+  Future<void> _loadApartments() async {
+    try {
+      final apartments = await DatabaseService.getAllApartments();
+      setState(() {
+        _apartments = apartments.map((apt) => {
+          'id': apt.id,
+          'name': apt.aptName,
+          'address': apt.address ?? '',
+          'city': apt.city ?? '',
+        }).toList();
+        _loadingApartments = false;
+        // Set first apartment as default if available
+        if (_apartments.isNotEmpty) {
+          _selectedApartmentId = _apartments.first['id'];
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _loadingApartments = false;
+      });
+      print('Error loading apartments: $e');
+    }
+  }
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _usernameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _flatNoController.dispose();
     super.dispose();
-  }
-
-  Future<void> _createAccount() async {
-    if (!_formKey.currentState!.validate()) return;
+  }  Future<void> _createAccount() async {
+    print('DEBUG: _createAccount called');
+    
+    if (!_formKey.currentState!.validate()) {
+      print('DEBUG: Form validation failed');
+      return;
+    }
     
     if (!_acceptTerms) {
+      print('DEBUG: Terms not accepted');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please accept the terms and policy'),
@@ -42,16 +89,100 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (mounted) {
-      setState(() => _isLoading = false);
-      // Navigate to apartment details after successful account creation
-      context.push('/apartment-details');
+    if (_selectedApartmentId == null) {
+      print('DEBUG: No apartment selected');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select your apartment'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
+
+    print('DEBUG: Setting loading state');
+    setState(() => _isLoading = true);    
+    try {
+      print('DEBUG: Calling AuthService.signUp with:');
+      print('  - Email: ${_emailController.text.trim()}');
+      print('  - Name: ${_nameController.text.trim()}');
+      print('  - Username: ${_usernameController.text.trim().isNotEmpty ? _usernameController.text.trim() : _nameController.text.trim().toLowerCase().replaceAll(' ', '_')}');
+      print('  - Apartment ID: $_selectedApartmentId');
+      
+      final response = await AuthService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _nameController.text.trim(),
+        username: _usernameController.text.trim().isNotEmpty 
+            ? _usernameController.text.trim() 
+            : _nameController.text.trim().toLowerCase().replaceAll(' ', '_'),
+        phoneNumber: _phoneController.text.trim().isNotEmpty 
+            ? _phoneController.text.trim() 
+            : '+91-0000000000',
+        address: _addressController.text.trim().isNotEmpty 
+            ? _addressController.text.trim() 
+            : 'Not provided',
+        flatNo: _flatNoController.text.trim().isNotEmpty 
+            ? _flatNoController.text.trim() 
+            : 'A101',
+        apartmentId: _selectedApartmentId!,
+      );
+
+      print('DEBUG: AuthService.signUp response: $response');
+      print('DEBUG: Response user: ${response.user}');
+
+      if (response.user != null) {
+        print('DEBUG: User created successfully, showing success dialog');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showSuccessDialog();
+        }
+      } else {
+        print('DEBUG: User is null in response');
+      }
+    } catch (e) {
+      print('DEBUG: Exception in _createAccount: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorDialog(e.toString());
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Account Created!'),
+        content: const Text('Please check your email and click the confirmation link to activate your account.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go('/login');
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Up Failed'),
+        content: Text(message.replaceAll('Exception: ', '')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -116,12 +247,19 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     _buildEmailField(),
                     const SizedBox(height: 16),
                     _buildPasswordField(),
+                    const SizedBox(height: 16),                    _buildConfirmPasswordField(),
                     const SizedBox(height: 16),
-                    _buildConfirmPasswordField(),
+                    _buildUsernameField(),
+                    const SizedBox(height: 16),
+                    _buildPhoneField(),
+                    const SizedBox(height: 16),                    _buildAddressField(),
+                    const SizedBox(height: 16),
+                    _buildFlatNoField(),
+                    const SizedBox(height: 16),
+                    _buildApartmentSelectionField(),
                     const SizedBox(height: 24),
                     _buildTermsAndConditions(),
-                    const SizedBox(height: 24),
-                    _buildSignUpButton(),
+                    const SizedBox(height: 24),                    _buildSignUpButton(),
                     const SizedBox(height: 24),
                     _buildSocialLogin(),
                     const SizedBox(height: 32),
@@ -629,8 +767,164 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           if (value != _passwordController.text) {
             return 'Passwords do not match';
           }
-          return null;
-        },
+          return null;        },
+      ),
+    );
+  }
+
+  Widget _buildUsernameField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: _usernameController,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: 'Username (Optional)',
+          hintText: 'Choose a username',
+          prefixIcon: const Icon(Icons.person_outline, color: AppTheme.primaryColor),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade100, width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: _phoneController,
+        keyboardType: TextInputType.phone,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: 'Phone Number (Optional)',
+          hintText: '+91-1234567890',
+          prefixIcon: const Icon(Icons.phone_outlined, color: AppTheme.primaryColor),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade100, width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddressField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: _addressController,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: 'Address (Optional)',
+          hintText: 'Your apartment address',
+          prefixIcon: const Icon(Icons.location_on_outlined, color: AppTheme.primaryColor),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade100, width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlatNoField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: _flatNoController,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: 'Flat Number (Optional)',
+          hintText: 'e.g., A101, B205',
+          prefixIcon: const Icon(Icons.home_outlined, color: AppTheme.primaryColor),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade100, width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+        ),
       ),
     );
   }
@@ -704,36 +998,47 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildSignUpButton() {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : _createAccount,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
+  }  Widget _buildSignUpButton() {
+    print('DEBUG: Building sign-up button, _isLoading: $_isLoading');
+    return Container(
+      width: double.infinity,
+      height: 56,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      child: Material(
+        color: AppTheme.primaryColor,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
           borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 0,
-      ),
-      child: _isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : const Text(
-              'Create Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+          onTap: _isLoading ? null : () {
+            print('DEBUG: Sign-up button InkWell tapped!');
+            _createAccount();
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Center(
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -836,8 +1141,166 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      ],
+        ),      ],
+    );
+  }
+
+  Widget _buildApartmentSelectionField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: _loadingApartments
+          ? Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade100, width: 2),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.apartment_outlined, color: AppTheme.primaryColor),
+                  const SizedBox(width: 16),
+                  const Text('Loading apartments...'),
+                  const Spacer(),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : DropdownButtonFormField<String>(
+              value: _selectedApartmentId,
+              decoration: InputDecoration(
+                labelText: 'Select Your Apartment Complex',
+                labelStyle: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.1,
+                ),
+                hintText: 'Choose your apartment complex',
+                hintStyle: TextStyle(
+                  color: AppTheme.textSecondary.withOpacity(0.5),
+                  fontSize: 16,
+                  letterSpacing: 0.1,
+                ),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryColor.withOpacity(0.12),
+                        AppTheme.primaryColor.withOpacity(0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.apartment_outlined,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: Colors.grey.shade100,
+                    width: 2,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: AppTheme.primaryColor,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 2,
+                  ),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 22,
+                ),
+              ),
+              items: _apartments.map((apartment) {
+                return DropdownMenuItem<String>(
+                  value: apartment['id'],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        apartment['name'],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      if (apartment['address'].isNotEmpty)
+                        Text(
+                          apartment['address'] + (apartment['city'].isNotEmpty ? ', ${apartment['city']}' : ''),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedApartmentId = value;
+                });
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select your apartment complex';
+                }
+                return null;
+              },
+            ),
     );
   }
 }
