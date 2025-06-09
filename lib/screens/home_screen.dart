@@ -1,708 +1,549 @@
 import 'package:flutter/material.dart';
-import '../config/app_theme.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:async';
+import '../services/database_service.dart';
+import '../services/auth_service.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return const HomePage();
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  String selectedCategory = "All";
-  final List<String> categories = ["All", "Fiction", "Mystery", "Science", "Romance"];
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final PageController _pageController = PageController();
+  final TextEditingController _searchController = TextEditingController();
+  int _currentBannerIndex = 0;
+  Timer? _timer;  List<Map<String, dynamic>> _featuredBooks = [];
+  List<Map<String, dynamic>> _newArrivals = [];
+  bool _isLoading = true;
   
-  final List<Map<String, dynamic>> featuredBooks = [
+  final List<Map<String, dynamic>> _banners = [
     {
-      "title": "The Silent Patient",
-      "author": "Alex Michaelides",
-      "rating": 4.8,
-      "price": "\$12.99",
-      "image": "https://placehold.co/400x600/667eea/ffffff?text=Mystery",
-      "genre": "Mystery",
-      "color": const Color(0xFF667eea)
+      'title': 'Explore the world through books',
+      'subtitle': 'Discover amazing stories in your community',
+      'color': Color(0xFFF9FAFB),
+      'textColor': Color(0xFF111827),
     },
     {
-      "title": "Where the Crawdads Sing",
-      "author": "Delia Owens",
-      "rating": 4.6,
-      "price": "\$14.99",
-      "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction",
-      "genre": "Fiction",
-      "color": const Color(0xFFf093fb)
+      'title': 'Share your favorite books',
+      'subtitle': 'Lend and borrow with your neighbors',
+      'color': Color(0xFFEEF2FF),
+      'textColor': Color(0xFF4338CA),
     },
     {
-      "title": "The Seven Husbands",
-      "author": "Taylor Jenkins Reid",
-      "rating": 4.9,
-      "price": "\$13.99",
-      "image": "https://placehold.co/400x600/4facfe/ffffff?text=Romance",
-      "genre": "Romance",
-      "color": const Color(0xFF4facfe)
+      'title': 'Join book discussions',
+      'subtitle': 'Connect with fellow book lovers',
+      'color': Color(0xFFF0FDF4),
+      'textColor': Color(0xFF15803D),
     },
   ];
-
-  final List<Map<String, dynamic>> allBooks = [
-    {
-      "title": "Atomic Habits",
-      "author": "James Clear",
-      "rating": 4.7,
-      "price": "\$15.99",
-      "image": "https://placehold.co/300x450/43e97b/ffffff?text=Science",
-      "genre": "Science",
-      "color": const Color(0xFF43e97b)
-    },
-    {
-      "title": "The Midnight Library",
-      "author": "Matt Haig",
-      "rating": 4.5,
-      "price": "\$12.99",
-      "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction",
-      "genre": "Fiction",
-      "color": const Color(0xFFf093fb)
-    },
-    {
-      "title": "Project Hail Mary",
-      "author": "Andy Weir",
-      "rating": 4.8,
-      "price": "\$16.99",
-      "image": "https://placehold.co/400x600/38f9d7/ffffff?text=Science",
-      "genre": "Science",
-      "color": const Color(0xFF38f9d7)
-    },
-    {
-      "title": "The Thursday Murder Club",
-      "author": "Richard Osman",
-      "rating": 4.4,
-      "price": "\$13.99",
-      "image": "https://placehold.co/400x600/667eea/ffffff?text=Mystery",
-      "genre": "Mystery",
-      "color": const Color(0xFF667eea)
-    },
-    {
-      "title": "It Ends with Us",
-      "author": "Colleen Hoover",
-      "rating": 4.7,
-      "price": "\$14.99",
-      "image": "https://placehold.co/400x600/4facfe/ffffff?text=Romance",
-      "genre": "Romance",
-      "color": const Color(0xFF4facfe)
-    },
-    {
-      "title": "The Silent Wife",
-      "author": "Karin Slaughter",
-      "rating": 4.6,
-      "price": "\$13.49",
-      "image": "https://placehold.co/400x600/667eea/ffffff?text=Mystery",
-      "genre": "Mystery",
-      "color": const Color(0xFF667eea)
-    },
-    {
-      "title": "Normal People",
-      "author": "Sally Rooney",
-      "rating": 4.3,
-      "price": "\$11.99",
-      "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction",
-      "genre": "Fiction",
-      "color": const Color(0xFFf093fb)
-    },
-    {
-      "title": "A Brief History of Time",
-      "author": "Stephen Hawking",
-      "rating": 4.9,
-      "price": "\$17.99",
-      "image": "https://placehold.co/300x450/43e97b/ffffff?text=Science",
-      "genre": "Science",
-      "color": const Color(0xFF43e97b)
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.forward();
+    _startAutoSlide();
+    _loadBooks();
+    _searchController.addListener(() {
+      setState(() {}); // Update UI when search text changes
+    });
+  }  Future<void> _loadBooks() async {
+    try {
+      // Get current user's apartment ID first
+      final currentUserId = AuthService.currentUserId;      if (currentUserId == null) {
+        print('Error: No current user found');
+        setState(() {
+          _featuredBooks = _getMockFeaturedBooks();
+          _newArrivals = _getMockNewArrivals();
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final currentUser = await DatabaseService.getUserProfile(currentUserId);      if (currentUser == null || currentUser.apartmentId == null) {
+        print('Error: No user details or apartment ID found');
+        setState(() {
+          _featuredBooks = _getMockFeaturedBooks();
+          _newArrivals = _getMockNewArrivals();
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Fetch books from current user's apartment only
+      final allBooks = await DatabaseService.getBooksByApartment(currentUser.apartmentId!);      // Convert Book objects to Map format for compatibility with existing UI
+      final booksAsMap = allBooks.map((book) => {
+        'id': book.id,
+        'title': book.title,
+        'author': book.author,
+        'category': book.category,
+        'coverUrl': book.coverUrl,
+        'rating': book.rating.toString(),
+        'isAvailable': book.isAvailable,
+        'isFeatured': book.isFeatured,
+        'isNewArrival': book.isNewArrival,
+      }).toList();      // Filter featured books (only books explicitly marked as featured)
+      final featuredBooks = booksAsMap.where((book) {
+        return book['isFeatured'] == true;
+      }).toList();
+
+      // Filter new arrivals (books marked as new arrivals)
+      final newArrivals = booksAsMap.where((book) {
+        return book['isNewArrival'] == true;
+      }).toList();
+
+      // If NO books are marked as featured, use highest rated books as fallback
+      final effectiveFeaturedBooks = featuredBooks.isNotEmpty 
+          ? featuredBooks 
+          : booksAsMap.where((book) => 
+              (double.tryParse(book['rating']?.toString() ?? '0') ?? 0.0) >= 4.0
+            ).toList().take(6).toList();
+
+      // If NO books are marked as new arrivals, use different books than featured as fallback
+      final effectiveNewArrivals = newArrivals.isNotEmpty 
+          ? newArrivals 
+          : booksAsMap.where((book) => 
+              !effectiveFeaturedBooks.any((featured) => featured['id'] == book['id'])
+            ).toList().take(6).toList();print('DEBUG: Total apartment books found: ${booksAsMap.length}');
+      print('DEBUG: Featured books found: ${featuredBooks.length}');
+      print('DEBUG: New arrivals found: ${newArrivals.length}');
+      print('DEBUG: Effective featured books: ${effectiveFeaturedBooks.length}');
+      print('DEBUG: Effective new arrivals: ${effectiveNewArrivals.length}');      setState(() {
+        // Use effective books with smart fallback logic
+        _featuredBooks = effectiveFeaturedBooks.isNotEmpty ? effectiveFeaturedBooks : _getMockFeaturedBooks();
+        _newArrivals = effectiveNewArrivals.isNotEmpty ? effectiveNewArrivals : _getMockNewArrivals();
+        _isLoading = false;
+      });
+    } catch (e) {      print('Error loading books: $e');
+      // Only fall back to mock data if there's a real error
+      setState(() {
+        _featuredBooks = _getMockFeaturedBooks();
+        _newArrivals = _getMockNewArrivals();
+        _isLoading = false;
+      });
+    }
+  }
+  List<Map<String, dynamic>> _getMockFeaturedBooks() {
+    return [
+      {'title': 'The Alchemist', 'author': 'Paulo Coelho'},
+      {'title': 'To Kill a Mockingbird', 'author': 'Harper Lee'},
+      {'title': '1984', 'author': 'George Orwell'},
+      {'title': 'Pride and Prejudice', 'author': 'Jane Austen'},
+      {'title': 'The Great Gatsby', 'author': 'F. Scott Fitzgerald'},
+    ];
+  }
+  List<Map<String, dynamic>> _getMockNewArrivals() {
+    return [
+      {'title': 'The Midnight Library', 'author': 'Matt Haig'},
+      {'title': 'Project Hail Mary', 'author': 'Andy Weir'},
+      {'title': 'Atomic Habits', 'author': 'James Clear'},
+      {'title': 'The Seven Husbands of Evelyn Hugo', 'author': 'Taylor Jenkins Reid'},
+    ];
   }
 
+  void _startAutoSlide() {
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_currentBannerIndex < _banners.length - 1) {
+        _currentBannerIndex++;
+      } else {
+        _currentBannerIndex = 0;
+      }
+      
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentBannerIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
   @override
   void dispose() {
-    _animationController.dispose();
+    _timer?.cancel();
+    _pageController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
+  void _performSearch() {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      context.pushNamed(
+        'search-results',
+        pathParameters: {'query': Uri.encodeComponent(query)},
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
-                  const SizedBox(height: 32),
-                  _buildSearchBar(),
-                  const SizedBox(height: 28),
-                  _buildCategoryFilter(),
-                  const SizedBox(height: 40),
-                  _buildFeaturedBooks(),
-                  const SizedBox(height: 40),
-                  _buildAllBooks(),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ShaderMask(
-              shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-              child: Text(
-                "Bookly",
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  fontSize: 32,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Discover your next great read",
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF667eea).withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.person_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: TextField(
-        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-        decoration: InputDecoration(
-          hintText: "Search books, authors...",
-          hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 16),
-          border: InputBorder.none,
-          prefixIcon: Container(
-            padding: const EdgeInsets.all(12),
-            child: const Icon(
-              Icons.search_rounded,
-              color: AppTheme.primaryColor,
-              size: 24,
-            ),
-          ),
-          suffixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.tune_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilter() {
-    return SizedBox(
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          final isSelected = selectedCategory == category;
-          
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedCategory = category;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: isSelected ? AppTheme.primaryGradient : null,
-                color: isSelected ? null : AppTheme.surfaceColor,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: isSelected
-                    ? AppTheme.buttonShadow
-                    : AppTheme.cardShadow,
-              ),
-              child: Center(
-                child: Text(
-                  category,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFeaturedBooks() {
-    final filteredFeaturedBooks = selectedCategory == "All" 
-        ? featuredBooks 
-        : featuredBooks.where((book) => book["genre"] == selectedCategory).toList();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Featured Books",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 24,
-              ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "See all",
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        filteredFeaturedBooks.isEmpty
-            ? _buildEmptyState("No featured books in this category")
-            : SizedBox(
-                height: 360,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  itemCount: filteredFeaturedBooks.length,
-                  itemBuilder: (context, index) {
-                    final book = filteredFeaturedBooks[index];
-                    return _buildFeaturedBookCard(book, index);
-                  },
-                ),
-              ),
-      ],
-    );
-  }
-
-  Widget _buildFeaturedBookCard(Map<String, dynamic> book, int index) {
-    return Container(
-      width: 240,
-      margin: const EdgeInsets.only(right: 20),
-      child: GestureDetector(
-        onTap: () {},
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 300 + (index * 100)),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.surfaceColor,
-                book["color"].withOpacity(0.02),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: AppTheme.cardShadow,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
+                  // Header - logo removed
+                  const SizedBox(height: 8),
+                    // Search bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      book["image"],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: book["color"].withOpacity(0.1),
-                          child: Icon(
-                            Icons.menu_book_rounded,
-                            color: book["color"],
-                            size: 48,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.search,
+                            size: 16,
+                            color: Color(0xFFADAEBC),
                           ),
-                        );
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              onSubmitted: (_) => _performSearch(),
+                              decoration: const InputDecoration(
+                                hintText: 'Search books, authors...',
+                                hintStyle: TextStyle(
+                                  color: Color(0xFFADAEBC),
+                                  fontSize: 14,
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontSize: 14,
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                          if (_searchController.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Icon(
+                                  Icons.clear,
+                                  size: 16,
+                                  color: Color(0xFFADAEBC),
+                                ),
+                              ),
+                            ),
+                          GestureDetector(
+                            onTap: _performSearch,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Icon(
+                                Icons.search,
+                                size: 16,
+                                color: Color(0xFF4F46E5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  // Slideable Hero Banner
+                  Container(
+                    width: double.infinity,
+                    height: 160,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Stack(
+                      children: [
+                        PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentBannerIndex = index;
+                            });
+                          },
+                          itemCount: _banners.length,
+                          itemBuilder: (context, index) {
+                            final banner = _banners[index];
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: banner['color'] as Color,
+                                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        banner['title'] as String,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: banner['textColor'] as Color,
+                                          fontSize: 20,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        banner['subtitle'] as String,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: (banner['textColor'] as Color).withOpacity(0.7),
+                                          fontSize: 14,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Page indicators
+                        Positioned(
+                          bottom: 12,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              _banners.length,
+                              (index) => Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                width: _currentBannerIndex == index ? 20 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _currentBannerIndex == index
+                                      ? const Color(0xFF111827)
+                                      : const Color(0xFF111827).withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  // First book section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [                        const Text(
+                          'Featured Books',
+                          style: TextStyle(
+                            color: Color(0xFF111827),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.16,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            context.pushNamed('all-books', pathParameters: {'category': 'featured'});
+                          },
+                          child: const Text(
+                            'See All',
+                            style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                    // First book row - using loaded data
+                  SizedBox(
+                    height: 270,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _featuredBooks.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final book = _featuredBooks[index];
+                        return _buildBookCard(book['title'], book['author']);
                       },
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  book["title"],
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  book["author"],
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Spacer(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                  
+                  const SizedBox(height: 24),                  // Second book section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: AppTheme.starColor,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "${book["rating"]}",
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
+                        const Text(
+                          'New Arrivals',
+                          style: TextStyle(
+                            color: Color(0xFF111827),
                             fontSize: 16,
+                            fontFamily: 'Inter',
                             fontWeight: FontWeight.w600,
+                            letterSpacing: -0.16,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            context.pushNamed('all-books', pathParameters: {'category': 'new-arrivals'});
+                          },
+                          child: const Text(
+                            'See All',
+                            style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.12,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: book["color"],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        book["price"],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                    // Second book row - using loaded data
+                  SizedBox(
+                    height: 270,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _newArrivals.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final book = _newArrivals[index];
+                        return _buildBookCard(book['title'], book['author']);
+                      },
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  
+                  // Bottom padding for navigation bar
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
-          ),
-        ),
       ),
     );
   }
-
-  Widget _buildAllBooks() {
-    final filteredBooks = selectedCategory == "All" 
-        ? allBooks 
-        : allBooks.where((book) => book["genre"] == selectedCategory).toList();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "All Books",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 24,
+  Widget _buildBookCard(String title, String author) {
+    return GestureDetector(
+      onTap: () {
+        context.pushNamed(
+          'book-detail',
+          pathParameters: {
+            'title': Uri.encodeComponent(title),
+            'author': Uri.encodeComponent(author),
+          },
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 160,
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+                width: 1,
               ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "View all",
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        filteredBooks.isEmpty
-            ? _buildEmptyState("No books found in this category")
-            : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: (filteredBooks.length / 2).ceil(),
-                itemBuilder: (context, rowIndex) {
-                  final int startIndex = rowIndex * 2;
-                  final int endIndex = startIndex + 1 < filteredBooks.length ? startIndex + 1 : startIndex;                  
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      children: [
-                        _buildBookCard(filteredBooks[startIndex]),
-                        const SizedBox(width: 16),
-                        if (endIndex > startIndex)
-                          _buildBookCard(filteredBooks[endIndex])
-                        else
-                          Expanded(child: Container()),
-                      ],
-                    ),
-                  );
-                },
-              ),
-      ],
-    );
-  }
-
-  Widget _buildBookCard(Map<String, dynamic> book) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          height: 100,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: book["color"].withOpacity(0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(4),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
+                  borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    book["image"],
+                    "https://picsum.photos/152/200?random=${title.hashCode}",
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          color: book["color"],
-                          size: 28,
+                      return Container(
+                        color: const Color(0xFFF3F4F6),
+                        child: const Center(
+                          child: Icon(
+                            Icons.book,
+                            size: 48,
+                            color: Color(0xFF9CA3AF),
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            book["title"],
-                            style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            book["author"],
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                color: AppTheme.starColor,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                book["rating"].toString(),
-                                style: const TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [book["color"], book["color"].withOpacity(0.8)],
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              "Read",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 160,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 14,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.14,
               ),
-              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            author,
+            style: const TextStyle(
+              color: Color(0xFF9CA3AF),
+              fontSize: 12,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.12,
+            ),
+          ),
+        ],
       ),
     );
   }
