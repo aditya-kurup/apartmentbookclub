@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -302,219 +303,235 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
     );
   }
-
   Widget _buildBorrowedBookCard(Map<String, dynamic> book) {
-    return SizedBox(
-      width: 140,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 140,
-            height: 190, // Consistent with book card height
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: _getGenreColor(book['genre']),
-                          borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: () {
+        context.pushNamed(
+          'borrowed-book-detail',
+          pathParameters: {'title': book['title']},
+          extra: book,
+        );
+      },
+      child: SizedBox(
+        width: 140,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 140,
+              height: 190, // Consistent with book card height
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: _getGenreColor(book['genre']),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.book,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.book,
-                          color: Colors.white,
-                          size: 30,
+                        const SizedBox(height: 8),
+                        Text(
+                          book['genre'],
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 10,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: book['daysLeft'] <= 7 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        book['genre'],
+                      child: Text(
+                        '${book['daysLeft']}d',
                         style: const TextStyle(
-                          color: Color(0xFF6B7280),
+                          color: Colors.white,
                           fontSize: 10,
                           fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: book['daysLeft'] <= 7 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '${book['daysLeft']}d',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            book['title'],
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            Text(
+              book['title'],
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 14,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2), // Consistent reduced spacing
-          Text(
-            book['author'],
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontSize: 12,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+            const SizedBox(height: 2), // Consistent reduced spacing
+            Text(
+              book['author'],
+              style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
   Widget _buildLendingBookCard(Map<String, dynamic> book) {
-    return SizedBox(
-      width: 140,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 140,
-            height: 190, // Consistent height
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: _getGenreColor(book['genre']),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.book,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        book['genre'],
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 10,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+    return GestureDetector(
+      onTap: () {
+        context.pushNamed(
+          'lending-book-detail',
+          pathParameters: {'title': book['title']},
+          extra: book,
+        );
+      },
+      child: SizedBox(
+        width: 140,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 140,
+              height: 190, // Consistent height
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981), // Green for lending
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Icon(
-                      Icons.share,
-                      color: Colors.white,
-                      size: 12,
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: _getGenreColor(book['genre']),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.book,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          book['genre'],
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 10,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981), // Green for lending
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.share,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            book['title'],
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            Text(
+              book['title'],
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 14,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            book['author'],
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontSize: 12,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+            const SizedBox(height: 2),
+            Text(
+              book['author'],
+              style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Lent to: ${book['lentTo']}',
-            style: const TextStyle(
-              color: Color(0xFF10B981),
-              fontSize: 10,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 4),
+            Text(
+              'Lent to: ${book['lentTo']}',
+              style: const TextStyle(
+                color: Color(0xFF10B981),
+                fontSize: 10,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

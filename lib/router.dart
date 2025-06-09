@@ -11,6 +11,8 @@ import 'screens/community_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/main_navigation.dart';
 import 'screens/lend_book_screen.dart';
+import 'screens/borrowed_book_detail_screen.dart';
+import 'screens/lending_book_detail_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -78,10 +80,25 @@ class AppRouter {
           final bookId = state.pathParameters['id']!;
           return BookDetailsScreen(bookId: bookId);
         },
-      ),
-      GoRoute(
+      ),      GoRoute(
         path: '/book/lend',
         builder: (context, state) => const LendBookScreen(),
+      ),
+      GoRoute(
+        path: '/book/borrowed/:title',
+        name: 'borrowed-book-detail',
+        builder: (context, state) {
+          final bookData = state.extra as Map<String, dynamic>;
+          return BorrowedBookDetailScreen(book: bookData);
+        },
+      ),
+      GoRoute(
+        path: '/book/lending/:title',
+        name: 'lending-book-detail',
+        builder: (context, state) {
+          final bookData = state.extra as Map<String, dynamic>;
+          return LendingBookDetailScreen(book: bookData);
+        },
       ),
     ],
   );

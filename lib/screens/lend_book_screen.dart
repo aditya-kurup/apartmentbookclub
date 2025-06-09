@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import '../config/app_theme.dart';
 
 class LendBookScreen extends StatefulWidget {
   const LendBookScreen({super.key});
@@ -59,6 +58,7 @@ class _LendBookScreenState extends State<LendBookScreen> {
   Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -71,7 +71,7 @@ class _LendBookScreenState extends State<LendBookScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: const Color(0xFFE5E7EB),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -79,7 +79,9 @@ class _LendBookScreenState extends State<LendBookScreen> {
             const Text(
               'Select Book Cover',
               style: TextStyle(
+                color: Color(0xFF111827),
                 fontSize: 18,
+                fontFamily: 'Inter',
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -116,18 +118,19 @@ class _LendBookScreenState extends State<LendBookScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withOpacity(0.1),
+          color: const Color(0xFF6366F1).withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+          border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.2)),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: AppTheme.primaryColor),
+            Icon(icon, size: 32, color: const Color(0xFF6366F1)),
             const SizedBox(height: 8),
             Text(
               label,
-              style: TextStyle(
-                color: AppTheme.primaryColor,
+              style: const TextStyle(
+                color: Color(0xFF6366F1),
+                fontFamily: 'Inter',
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -163,35 +166,62 @@ class _LendBookScreenState extends State<LendBookScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: const Color(0xFF10B981).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.check_circle_rounded,
-            color: Colors.green,
+            color: Color(0xFF10B981),
             size: 32,
           ),
         ),
         title: const Text(
           'Book Added Successfully!',
           textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
         ),
         content: const Text(
           'Your book is now available for lending in your apartment community.',
           textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontFamily: 'Inter',
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.pop();
-            },
-            child: const Text('Great!'),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 16),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Great!',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -199,271 +229,309 @@ class _LendBookScreenState extends State<LendBookScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Lend a Book',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.textPrimary,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: AppTheme.textMuted.withOpacity(0.1),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Book Cover Section
-                _buildSectionCard(
-                  title: 'Book Cover',
-                  child: GestureDetector(
-                    onTap: _pickImage,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header matching new UI style
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => context.pop(),
                     child: Container(
-                      height: 200,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: _imageFile != null
-                          ? Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    _imageFile!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF6B7280),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Lend a Book',
+                    style: TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 24,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Form Content
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Book Cover Section
+                        _buildSectionCard(
+                          title: 'Book Cover',
+                          child: GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                  width: 1,
                                 ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
+                              ),
+                              child: _imageFile != null
+                                  ? Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(
+                                            _imageFile!,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.black54,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE5E7EB),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.add_photo_alternate_rounded,
+                                            size: 32,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'Add Book Cover',
+                                          style: TextStyle(
+                                            color: Color(0xFF111827),
+                                            fontSize: 16,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        const Text(
+                                          'Tap to select image',
+                                          style: TextStyle(
+                                            color: Color(0xFF6B7280),
+                                            fontSize: 14,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Book Details Section
+                        _buildSectionCard(
+                          title: 'Book Details',
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                controller: _titleController,
+                                label: 'Book Title',
+                                hint: 'Enter the book title',
+                                icon: Icons.book_rounded,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter the book title';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _authorController,
+                                label: 'Author',
+                                hint: 'Enter the author\'s name',
+                                icon: Icons.person_rounded,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter the author\'s name';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildDropdownField(
+                                label: 'Category',
+                                value: _selectedCategory,
+                                items: _categories,
+                                icon: Icons.category_rounded,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedCategory = value!;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _descriptionController,
+                                label: 'Description',
+                                hint: 'Enter a brief description of the book',
+                                icon: Icons.description_rounded,
+                                maxLines: 3,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter a description';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _isbnController,
+                                label: 'ISBN (Optional)',
+                                hint: 'Enter the ISBN number',
+                                icon: Icons.qr_code_rounded,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Lending Details Section
+                        _buildSectionCard(
+                          title: 'Lending Details',
+                          child: Column(
+                            children: [
+                              _buildDropdownField(
+                                label: 'Book Condition',
+                                value: _selectedCondition,
+                                items: _conditions,
+                                icon: Icons.star_rounded,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedCondition = value!;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildDropdownField(
+                                label: 'Lending Period',
+                                value: _selectedLendingPeriod,
+                                items: _lendingPeriods,
+                                icon: Icons.schedule_rounded,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedLendingPeriod = value!;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Submit Button
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF6366F1),
+                                Color(0xFF4F46E5),
                               ],
-                            )
-                          : Column(
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6366F1).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.add_photo_alternate_rounded,
-                                    size: 32,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
+                                Icon(Icons.library_add_rounded, color: Colors.white),
+                                SizedBox(width: 8),
                                 Text(
-                                  'Add Book Cover',
+                                  'Add Book to Lend',
                                   style: TextStyle(
-                                    color: AppTheme.primaryColor,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tap to select image',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
+                                    color: Colors.white,
+                                    fontFamily: 'Inter',
                                   ),
                                 ),
                               ],
                             ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Book Details Section
-                _buildSectionCard(
-                  title: 'Book Details',
-                  child: Column(
-                    children: [
-                      _buildTextField(
-                        controller: _titleController,
-                        label: 'Book Title',
-                        hint: 'Enter the book title',
-                        icon: Icons.book_rounded,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter the book title';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _authorController,
-                        label: 'Author',
-                        hint: 'Enter the author\'s name',
-                        icon: Icons.person_rounded,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter the author\'s name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdownField(
-                        label: 'Category',
-                        value: _selectedCategory,
-                        items: _categories,
-                        icon: Icons.category_rounded,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descriptionController,
-                        label: 'Description',
-                        hint: 'Enter a brief description of the book',
-                        icon: Icons.description_rounded,
-                        maxLines: 3,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a description';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _isbnController,
-                        label: 'ISBN (Optional)',
-                        hint: 'Enter the ISBN number',
-                        icon: Icons.qr_code_rounded,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Lending Details Section
-                _buildSectionCard(
-                  title: 'Lending Details',
-                  child: Column(
-                    children: [
-                      _buildDropdownField(
-                        label: 'Book Condition',
-                        value: _selectedCondition,
-                        items: _conditions,
-                        icon: Icons.star_rounded,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCondition = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdownField(
-                        label: 'Lending Period',
-                        value: _selectedLendingPeriod,
-                        items: _lendingPeriods,
-                        icon: Icons.schedule_rounded,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedLendingPeriod = value!;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Submit Button
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryColor,
-                        AppTheme.primaryColor.withOpacity(0.8),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.library_add_rounded, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          'Add Book to Lend',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
                           ),
                         ),
+
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
+
   Widget _buildSectionCard({
     required String title,
     required Widget child,
@@ -471,9 +539,15 @@ class _LendBookScreenState extends State<LendBookScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF111827).withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,7 +557,8 @@ class _LendBookScreenState extends State<LendBookScreen> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
+              color: Color(0xFF111827),
+              fontFamily: 'Inter',
             ),
           ),
           const SizedBox(height: 16),
@@ -492,6 +567,7 @@ class _LendBookScreenState extends State<LendBookScreen> {
       ),
     );
   }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -503,32 +579,43 @@ class _LendBookScreenState extends State<LendBookScreen> {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+      style: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 16,
+        fontFamily: 'Inter',
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: AppTheme.textSecondary),
-        hintStyle: const TextStyle(color: AppTheme.textMuted),
-        prefixIcon: Icon(icon, color: AppTheme.primaryColor),
+        labelStyle: const TextStyle(
+          color: Color(0xFF6B7280),
+          fontFamily: 'Inter',
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF9CA3AF),
+          fontFamily: 'Inter',
+        ),
+        prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
         ),
         filled: true,
-        fillColor: AppTheme.backgroundColor,
+        fillColor: const Color(0xFFF9FAFB),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: validator,
     );
   }
+
   Widget _buildDropdownField({
     required String label,
     required String value,
@@ -538,25 +625,32 @@ class _LendBookScreenState extends State<LendBookScreen> {
   }) {
     return DropdownButtonFormField<String>(
       value: value,
-      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+      style: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 16,
+        fontFamily: 'Inter',
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppTheme.textSecondary),
-        prefixIcon: Icon(icon, color: AppTheme.primaryColor),
+        labelStyle: const TextStyle(
+          color: Color(0xFF6B7280),
+          fontFamily: 'Inter',
+        ),
+        prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.textMuted.withOpacity(0.3)),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
         ),
         filled: true,
-        fillColor: AppTheme.backgroundColor,
+        fillColor: const Color(0xFFF9FAFB),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       items: items.map((item) {
@@ -564,7 +658,10 @@ class _LendBookScreenState extends State<LendBookScreen> {
           value: item,
           child: Text(
             item,
-            style: const TextStyle(color: AppTheme.textPrimary),
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontFamily: 'Inter',
+            ),
           ),
         );
       }).toList(),
