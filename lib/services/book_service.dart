@@ -6,8 +6,7 @@ class BookService {
   BookService._internal();
 
   // Mock data for demonstration
-  final List<Book> _books = [
-    Book(
+  final List<Book> _books = [    Book(
       id: '1',
       title: 'The Seven Husbands of Evelyn Hugo',
       author: 'Taylor Jenkins Reid',
@@ -20,8 +19,13 @@ class BookService {
       publishedDate: DateTime(2017, 6, 13),
       isFeatured: true,
       isNewArrival: false,
-    ),
-    Book(
+      publisher: 'Atria Books',
+      maxLendingDays: 14,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),    Book(
       id: '2',
       title: 'Atomic Habits',
       author: 'James Clear',
@@ -34,8 +38,13 @@ class BookService {
       publishedDate: DateTime(2018, 10, 16),
       isFeatured: true,
       isNewArrival: false,
-    ),
-    Book(
+      publisher: 'Avery',
+      maxLendingDays: 14,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),    Book(
       id: '3',
       title: 'The Thursday Murder Club',
       author: 'Richard Osman',
@@ -48,8 +57,13 @@ class BookService {
       publishedDate: DateTime(2020, 9, 3),
       isFeatured: false,
       isNewArrival: true,
-    ),
-    Book(
+      publisher: 'Viking',
+      maxLendingDays: 14,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),    Book(
       id: '4',
       title: 'Dune',
       author: 'Frank Herbert',
@@ -62,8 +76,13 @@ class BookService {
       publishedDate: DateTime(1965, 8, 1),
       isFeatured: false,
       isNewArrival: false,
-    ),
-    Book(
+      publisher: 'Ace Books',
+      maxLendingDays: 21,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),    Book(
       id: '5',
       title: 'The Midnight Library',
       author: 'Matt Haig',
@@ -76,8 +95,13 @@ class BookService {
       publishedDate: DateTime(2020, 8, 13),
       isFeatured: false,
       isNewArrival: true,
-    ),
-    Book(
+      publisher: 'Doubleday',
+      maxLendingDays: 14,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),    Book(
       id: '6',
       title: 'Educated',
       author: 'Tara Westover',
@@ -90,6 +114,12 @@ class BookService {
       publishedDate: DateTime(2018, 2, 20),
       isFeatured: true,
       isNewArrival: false,
+      publisher: 'Random House',
+      maxLendingDays: 14,
+      lenderId: null,
+      apartmentId: '11111111-1111-1111-1111-111111111111',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     ),
   ];
 

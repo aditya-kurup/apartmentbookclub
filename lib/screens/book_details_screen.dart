@@ -187,9 +187,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildInfoRow('Pages', _book!.pages.toString()),
-            const Divider(),
-            _buildInfoRow('ISBN', _book!.isbn),
+            _buildInfoRow('Pages', _book!.pages.toString()),            const Divider(),
+            _buildInfoRow('ISBN', _book!.isbn ?? 'Not available'),
             const Divider(),
             _buildInfoRow('Published', _formatDate(_book!.publishedDate)),
             const Divider(),

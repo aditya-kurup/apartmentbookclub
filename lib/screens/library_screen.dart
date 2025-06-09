@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/database_service.dart';
+import '../models/book.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -9,66 +11,151 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  final List<Map<String, dynamic>> borrowedBooks = [
-    {
-      "title": "The Midnight Library",
-      "author": "Matt Haig",
-      "daysLeft": 5,
-      "borrowedFrom": "Sarah Johnson",
-      "borrowDate": "May 15, 2025",
-      "returnDate": "June 5, 2025",
-      "genre": "Fiction",
-      "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction"
-    },
-    {
-      "title": "Project Hail Mary",
-      "author": "Andy Weir",
-      "daysLeft": 12,
-      "borrowedFrom": "Mike Chen",
-      "borrowDate": "May 20, 2025",
-      "returnDate": "June 12, 2025",
-      "genre": "Science Fiction",
-      "image": "https://placehold.co/400x600/43e97b/ffffff?text=Science+Fiction"
-    },
-    {
-      "title": "Atomic Habits",
-      "author": "James Clear",
-      "daysLeft": 18,
-      "borrowedFrom": "Emma Davis",
-      "borrowDate": "May 25, 2025",
-      "returnDate": "June 18, 2025",
-      "genre": "Non-Fiction",
-      "image": "https://placehold.co/400x600/43e97b/ffffff?text=Non-Fiction"
-    },
-  ];
+  List<Map<String, dynamic>> borrowedBooks = [];
+  List<Map<String, dynamic>> lendingBooks = [];
+  bool _isLoading = true;
+  
+  // Mock user ID - in real app, get from authentication
+  final String currentUserId = 'current-user-id';
 
-  final List<Map<String, dynamic>> lendingBooks = [
-    {
-      "title": "Where the Crawdads Sing",
-      "author": "Delia Owens",
-      "lentTo": "Alex Rodriguez",
-      "lendDate": "May 10, 2025",
-      "returnDate": "June 10, 2025",
-      "genre": "Fiction",
-      "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction"
-    },
-    {
-      "title": "The Seven Husbands of Evelyn Hugo",
-      "author": "Taylor Jenkins Reid",
-      "lentTo": "Jessica Kim",
-      "lendDate": "May 18, 2025",
-      "returnDate": "June 15, 2025",
-      "genre": "Romance",
-      "image": "https://placehold.co/400x600/4facfe/ffffff?text=Romance"
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadLibraryData();
+  }
 
+  Future<void> _loadLibraryData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Fetch borrow requests for current user as borrower
+      final borrowRequests = await DatabaseService.getBorrowRequestsByBorrower(currentUserId);
+      
+      // Fetch borrow requests for current user as lender
+      final lendRequests = await DatabaseService.getBorrowRequestsByLender(currentUserId);
+      
+      // Convert borrow requests to UI format for borrowed books
+      final borrowedBooksData = borrowRequests
+          .where((request) => request.status == 'approved')
+          .map((request) => _convertBorrowRequestToBorrowedBook(request))
+          .toList();
+      
+      // Convert lend requests to UI format for lending books
+      final lendingBooksData = lendRequests
+          .where((request) => request.status == 'approved')
+          .map((request) => _convertBorrowRequestToLendingBook(request))
+          .toList();
+      
+      setState(() {
+        borrowedBooks = borrowedBooksData;
+        lendingBooks = lendingBooksData;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading library data: $e');
+      // Fallback to mock data
+      _loadMockData();
+    }
+  }
+
+  Map<String, dynamic> _convertBorrowRequestToBorrowedBook(BorrowRequest request) {
+    final returnDate = request.approvedDate?.add(Duration(days: request.lendingPeriodDays));
+    final daysLeft = returnDate?.difference(DateTime.now()).inDays ?? 0;
+    
+    return {
+      'title': 'Book Title', // Would come from joined book data
+      'author': 'Book Author',
+      'daysLeft': daysLeft,
+      'borrowedFrom': 'Lender Name', // Would come from joined user data
+      'borrowDate': request.approvedDate?.toString().split(' ').first ?? '',
+      'returnDate': returnDate?.toString().split(' ').first ?? '',
+      'genre': 'Fiction', // Would come from book data
+      'image': 'https://placehold.co/400x600/f093fb/ffffff?text=Book',
+    };
+  }
+
+  Map<String, dynamic> _convertBorrowRequestToLendingBook(BorrowRequest request) {
+    return {
+      'title': 'Book Title', // Would come from joined book data  
+      'author': 'Book Author',
+      'lentTo': 'Borrower Name', // Would come from joined user data
+      'lendDate': request.approvedDate?.toString().split(' ').first ?? '',
+      'returnDate': request.approvedDate?.add(Duration(days: request.lendingPeriodDays)).toString().split(' ').first ?? '',
+      'genre': 'Fiction', // Would come from book data
+      'image': 'https://placehold.co/400x600/4facfe/ffffff?text=Book',
+    };
+  }
+
+  void _loadMockData() {
+    setState(() {
+      borrowedBooks = [
+        {
+          "title": "The Midnight Library",
+          "author": "Matt Haig",
+          "daysLeft": 5,
+          "borrowedFrom": "Sarah Johnson",
+          "borrowDate": "May 15, 2025",
+          "returnDate": "June 5, 2025",
+          "genre": "Fiction",
+          "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction"
+        },
+        {
+          "title": "Project Hail Mary",
+          "author": "Andy Weir",
+          "daysLeft": 12,
+          "borrowedFrom": "Mike Chen",
+          "borrowDate": "May 20, 2025",
+          "returnDate": "June 12, 2025",
+          "genre": "Science Fiction",
+          "image": "https://placehold.co/400x600/43e97b/ffffff?text=Science+Fiction"
+        },
+        {
+          "title": "Atomic Habits",
+          "author": "James Clear",
+          "daysLeft": 18,
+          "borrowedFrom": "Emma Davis",
+          "borrowDate": "May 25, 2025",
+          "returnDate": "June 18, 2025",
+          "genre": "Non-Fiction",
+          "image": "https://placehold.co/400x600/43e97b/ffffff?text=Non-Fiction"
+        },
+      ];
+
+      lendingBooks = [
+        {
+          "title": "Where the Crawdads Sing",
+          "author": "Delia Owens",
+          "lentTo": "Alex Rodriguez",
+          "lendDate": "May 10, 2025",
+          "returnDate": "June 10, 2025",
+          "genre": "Fiction",
+          "image": "https://placehold.co/400x600/f093fb/ffffff?text=Fiction"
+        },
+        {
+          "title": "The Seven Husbands of Evelyn Hugo",
+          "author": "Taylor Jenkins Reid",
+          "lentTo": "Jessica Kim",
+          "lendDate": "May 18, 2025",
+          "returnDate": "June 15, 2025",
+          "genre": "Romance",
+          "image": "https://placehold.co/400x600/4facfe/ffffff?text=Romance"
+        },
+      ];
+      _isLoading = false;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              )
+            : SingleChildScrollView(
           child: Column(
             children: [
               // Header matching home page style
@@ -228,9 +315,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               ] else ...[
                 _buildEmptyState('Lending Books', 'No books being lent yet', Icons.share_outlined),
-              ],
-
-              // Bottom padding for navigation bar
+              ],              // Bottom padding for navigation bar
               const SizedBox(height: 100),
             ],
           ),
